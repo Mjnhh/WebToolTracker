@@ -1,123 +1,108 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ thống Hỗ trợ Trực tuyến - Tectonic Devs</title>
-  <link rel="stylesheet" href="/staff/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Hỗ trợ Khách hàng</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
+    <!-- Form đăng nhập -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-form">
+            <h2>Đăng nhập nhân viên</h2>
+            <div class="form-group">
+                <label for="username">Tên đăng nhập</label>
+                <input type="text" id="username" placeholder="Nhập tên đăng nhập">
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu">
+            </div>
+            <p id="login-error" class="error-message"></p>
+            <button id="login-submit">Đăng nhập</button>
+        </div>
+    </div>
+
 <body>
-  <div class="staff-container">
-    <header class="staff-header">
-      <div class="logo">
-        <img src="/logo.png" alt="Tectonic Devs Logo">
-        <h1>Hệ thống Hỗ trợ Trực tuyến</h1>
-      </div>
-      <div class="user-info">
-        <span id="staff-name">Đang tải...</span>
-        <button id="logout-btn"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button>
-      </div>
-    </header>
-
-    <div class="main-content">
-      <div class="sessions-panel">
-        <div class="sessions-header">
-          <h2>Phiên hỗ trợ</h2>
-          <div class="filter-options">
-            <select id="session-filter">
-              <option value="all">Tất cả phiên</option>
-              <option value="waiting">Đang chờ</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="my">Phiên của tôi</option>
-            </select>
-          </div>
-        </div>
-        <div class="sessions-list" id="sessions-list">
-          <!-- Sẽ được điền bởi JavaScript -->
-          <div class="loading-placeholder">Đang tải danh sách phiên...</div>
-        </div>
-      </div>
-
-      <div class="chat-container" id="chat-container">
-        <div class="no-session-selected">
-          <i class="fas fa-comments"></i>
-          <p>Chọn một phiên hỗ trợ để bắt đầu trò chuyện</p>
-        </div>
-        
-        <!-- Chat UI sẽ được hiển thị khi chọn phiên -->
-        <div class="chat-interface" style="display: none;">
-          <div class="chat-header">
-            <div class="client-info">
-              <h3 id="client-name">Khách hàng</h3>
-              <span id="session-time">Bắt đầu: 00:00:00</span>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="/logo.png" alt="Logo" class="logo">
+                <h1>Support Center</h1>
             </div>
-            <div class="chat-actions">
-              <button id="end-session-btn" class="end-btn">
-                <i class="fas fa-times-circle"></i> Kết thúc phiên
-              </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item active">
+                    <i class="fas fa-comments"></i>
+                    <span>Hội thoại</span>
+                </div>
+                <div class="menu-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Thống kê</span>
+                </div>
+                <div class="menu-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Cài đặt</span>
+                </div>
             </div>
-          </div>
-          
-          <div class="chat-messages" id="chat-messages">
-            <!-- Tin nhắn sẽ được điền bởi JavaScript -->
-            <div class="loading-placeholder">Đang tải tin nhắn...</div>
-          </div>
-          
-          <div class="chat-input-container">
-            <textarea id="chat-input" placeholder="Nhập tin nhắn của bạn..."></textarea>
-            <button id="send-message-btn">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div class="quick-responses-panel">
-        <h2>Trả lời nhanh</h2>
-        <div class="quick-responses-list">
-          <button class="quick-response-item">Xin chào! Tôi có thể giúp gì cho bạn?</button>
-          <button class="quick-response-item">Cảm ơn bạn đã liên hệ với Tectonic Devs.</button>
-          <button class="quick-response-item">Vui lòng cung cấp thêm thông tin về vấn đề bạn đang gặp phải.</button>
-          <button class="quick-response-item">Tôi cần một chút thời gian để kiểm tra thông tin này.</button>
-          <button class="quick-response-item">Có điều gì khác tôi có thể giúp bạn không?</button>
-          <button class="quick-response-item">Chúng tôi sẽ cập nhật bạn qua email khi có tiến triển mới.</button>
-        </div>
-        <div class="custom-response">
-          <h3>Câu trả lời tùy chỉnh</h3>
-          <div class="response-templates">
-            <button class="template-btn" data-template="technical">Kỹ thuật</button>
-            <button class="template-btn" data-template="pricing">Báo giá</button>
-            <button class="template-btn" data-template="timeline">Thời gian</button>
-            <button class="template-btn" data-template="contact">Liên hệ</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="login-overlay" id="login-overlay">
-    <div class="login-card">
-      <div class="login-header">
-        <img src="/logo.png" alt="Tectonic Devs Logo">
-        <h2>Đăng nhập Hệ thống Hỗ trợ</h2>
-      </div>
-      <div class="login-form">
-        <div class="form-group">
-          <label for="username">Tên đăng nhập</label>
-          <input type="text" id="username" name="username" required>
-        </div>
-        <div class="form-group">
-          <label for="password">Mật khẩu</label>
-          <input type="password" id="password" name="password" required>
-        </div>
-        <button type="submit" id="login-submit">Đăng nhập</button>
-        <div class="login-error" id="login-error"></div>
-      </div>
-    </div>
-  </div>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?background=random" alt="Avatar" class="avatar">
+                    <div class="user-details">
+                        <span id="staff-name">Đang tải...</span>
+                        <span class="status online">Online</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
+        </nav>
 
-  <script src="/staff/app.js"></script>
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-title">
+                    <h2>Phiên hỗ trợ</h2>
+                    <p class="subtitle">Quản lý các cuộc hội thoại với khách hàng</p>
+                </div>
+                <div class="header-actions">
+                    <select id="session-filter" class="filter-select">
+                        <option value="all">Tất cả phiên</option>
+                        <option value="waiting">Đang chờ</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="my">Phiên của tôi</option>
+                    </select>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Tìm kiếm...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="conversations-layout">
+                <div class="conversations-list">
+                    <div id="sessions-list" class="sessions-wrapper">
+                        <!-- Sessions will be populated by JavaScript -->
+                        <div class="loading-placeholder">Đang tải danh sách phiên...</div>
+                    </div>
+                </div>
+
+                <div id="chat-container" class="chat-area">
+                    <div class="no-chat-selected">
+                        <i class="fas fa-comments"></i>
+                        <h3>Chưa có phiên chat nào được chọn</h3>
+                        <p>Vui lòng chọn một phiên từ danh sách bên trái để bắt đầu</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
 </body>
-</html> 
+</html>
