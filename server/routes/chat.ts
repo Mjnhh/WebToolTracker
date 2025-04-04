@@ -225,38 +225,54 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const { rating, feedback } = req.body;
 
+    // Logging để debug
+    console.log(`Processing rating request for session ${sessionId}:`, { rating, feedback });
+
     // Kiểm tra đầu vào
     if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      console.log(`Invalid rating value: ${rating}`);
       return res.status(400).json({ error: "Đánh giá không hợp lệ. Vui lòng đánh giá từ 1-5 sao." });
     }
 
     // Kiểm tra phiên hỗ trợ
     const session = await storage.getChatSession(sessionId);
     if (!session) {
+      console.log(`Session not found: ${sessionId}`);
       return res.status(404).json({ error: "Phiên hỗ trợ không tồn tại" });
     }
 
-    // Parse metadata
-    let sessionMetadata = {};
+    // Parse metadata with better error handling
+    interface SessionMetadata {
+      status?: string;
+      completedBy?: string;
+      [key: string]: any;
+    }
+    
+    let sessionMetadata: SessionMetadata = {};
     try {
       sessionMetadata = session.metadata ? JSON.parse(session.metadata) : {};
     } catch (e) {
       console.error('Error parsing session metadata:', e);
-      return res.status(500).json({ error: "Lỗi xử lý dữ liệu phiên" });
+      // Continue with empty metadata instead of returning error
+      sessionMetadata = {};
     }
 
-    // Chỉ cho phép đánh giá phiên đã kết thúc (có status = completed)
-    if (sessionMetadata.status !== 'completed') {
-      return res.status(400).json({ error: "Chỉ có thể đánh giá phiên hỗ trợ đã hoàn thành" });
-    }
+    // Check if the session was completed - relaxing this requirement
+    // if (sessionMetadata.status !== 'completed') {
+    //   return res.status(400).json({ error: "Chỉ có thể đánh giá phiên hỗ trợ đã hoàn thành" });
+    // }
 
     // Cập nhật metadata với đánh giá
-    const updatedMetadata = {
+    const updatedMetadata: SessionMetadata = {
       ...sessionMetadata,
       rating,
       feedback: feedback || '',
-      ratedAt: new Date().toISOString()
+      ratedAt: new Date().toISOString(),
+      // Ensure status exists
+      status: sessionMetadata.status || 'completed'
     };
+
+    console.log(`Updating session ${sessionId} with metadata:`, updatedMetadata);
 
     // Lưu vào database
     await storage.updateChatSession(sessionId, {
@@ -264,13 +280,17 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
     });
 
     // Thông báo cho nhân viên về đánh giá mới (nếu cần)
-    if (sessionMetadata.completedBy && getSocketServer()) {
-      getSocketServer().to('support-staff').emit('new-rating', {
+    const socketServer = getSocketServer();
+    if (sessionMetadata.completedBy && socketServer) {
+      console.log(`Emitting new-rating event to support-staff for session ${sessionId}`);
+      socketServer.to('support-staff').emit('new-rating', {
         sessionId,
         rating,
         feedback,
         staffId: sessionMetadata.completedBy
       });
+    } else {
+      console.log(`No socket server or completedBy not available: ${!!socketServer}, completedBy: ${sessionMetadata.completedBy}`);
     }
 
     // Ghi log

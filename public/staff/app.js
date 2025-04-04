@@ -10,6 +10,572 @@ const API_BASE_URL = '/api';
 let isSendingMessage = false; // Biến trạng thái để ngăn chặn gửi nhiều lần
 let isLoadingMessages = false; // Biến trạng thái để ngăn chặn việc tải tin nhắn nhiều lần
 
+// Khởi tạo Spotify Player
+let spotifyToken = localStorage.getItem('spotifyToken');
+let spotifyPlayer = null;
+let spotifyDeviceId = null;
+let isPlaying = false;
+let currentTrack = null;
+
+// Hàm khởi tạo Spotify Web Playback SDK
+function initSpotify() {
+  console.log('Bắt đầu khởi tạo Spotify SDK');
+  showNotification('Đang khởi tạo trình phát Spotify...', 'info');
+  
+  // Đảm bảo đã có token
+  if (!spotifyToken) {
+    console.error('Không có token Spotify khi khởi tạo SDK');
+    showNotification('Không thể khởi tạo Spotify - Thiếu token', 'error');
+    return;
+  }
+  
+  // Kiểm tra nếu script đã được tải
+  if (document.getElementById('spotify-player-script')) {
+    console.log('Script Spotify đã được tải trước đó, tiếp tục thiết lập');
+    setupSpotifyPlayer();
+    return;
+  }
+  
+  // Thêm Spotify Web Playback SDK script
+  console.log('Thêm script Spotify Web Playback SDK');
+  const script = document.createElement('script');
+  script.id = 'spotify-player-script';
+  script.src = 'https://sdk.scdn.co/spotify-player.js';
+  script.async = true;
+  
+  // Thêm sự kiện để debug lỗi tải script
+  script.onload = () => {
+    console.log('Script Spotify đã tải thành công');
+  };
+  
+  script.onerror = (error) => {
+    console.error('Lỗi khi tải script Spotify:', error);
+    showNotification('Không thể tải Spotify Player SDK', 'error');
+    
+    // Thử tải lại sau 3 giây
+    setTimeout(() => {
+      console.log('Đang thử tải lại script Spotify...');
+      document.getElementById('spotify-player-script')?.remove();
+      initSpotify();
+    }, 3000);
+  };
+  
+  document.body.appendChild(script);
+  
+  // Hàm callback khi Spotify SDK đã sẵn sàng
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    console.log('Spotify Web Playback SDK đã sẵn sàng');
+    setupSpotifyPlayer();
+  };
+  
+  // Backup để đảm bảo SDK được khởi tạo - đôi khi sự kiện onSpotifyWebPlaybackSDKReady không được gọi
+  setTimeout(() => {
+    if (typeof Spotify !== 'undefined' && !document.querySelector('.spotify-player-container:not([style*="display: none"])')) {
+      console.log('Không thấy SDK được khởi tạo sau timeout, thử thiết lập lại');
+      setupSpotifyPlayer();
+    }
+  }, 5000);
+}
+
+// Hàm thiết lập Spotify Player
+function setupSpotifyPlayer() {
+  console.log('Đang thiết lập Spotify Player...');
+  
+  if (!spotifyToken) {
+    console.error('Không có token Spotify khi thiết lập player');
+    document.getElementById('spotify-not-connected').style.display = 'block';
+    document.getElementById('spotify-player-container').style.display = 'none';
+    showNotification('Không thể kết nối Spotify - thiếu token', 'error');
+    return;
+  }
+  
+  try {
+    // Kiểm tra xem Spotify đã được định nghĩa chưa
+    if (typeof Spotify === 'undefined') {
+      console.error('SDK Spotify chưa được tải hoặc không khả dụng');
+      showNotification('Không thể khởi tạo trình phát Spotify - SDK không khả dụng', 'error');
+      return;
+    }
+    
+    console.log('Khởi tạo đối tượng Spotify.Player');
+    
+    // Khởi tạo player
+    spotifyPlayer = new Spotify.Player({
+      name: 'Tool Tracker Staff App',
+      getOAuthToken: cb => { cb(spotifyToken); },
+      volume: 0.5
+    });
+    
+    console.log('Đã tạo đối tượng Player, đang thiết lập các sự kiện...');
+    
+    // Lỗi kết nối
+    spotifyPlayer.addListener('initialization_error', ({ message }) => {
+      console.error('Failed to initialize Spotify player:', message);
+      showNotification('Lỗi khởi tạo trình phát Spotify: ' + message, 'error');
+    });
+    
+    // Lỗi xác thực
+    spotifyPlayer.addListener('authentication_error', ({ message }) => {
+      console.error('Authentication error:', message);
+      localStorage.removeItem('spotifyToken');
+      spotifyToken = null;
+      showNotification('Token Spotify hết hạn hoặc không hợp lệ: ' + message, 'error');
+      document.getElementById('spotify-not-connected').style.display = 'block';
+      document.getElementById('spotify-player-container').style.display = 'none';
+    });
+    
+    // Lỗi tài khoản
+    spotifyPlayer.addListener('account_error', ({ message }) => {
+      console.error('Account error:', message);
+      showNotification('Lỗi tài khoản Spotify: ' + message, 'error');
+    });
+    
+    // Trình phát đã sẵn sàng
+    spotifyPlayer.addListener('ready', ({ device_id }) => {
+      console.log('Spotify player ready with device ID', device_id);
+      spotifyDeviceId = device_id;
+      document.getElementById('spotify-not-connected').style.display = 'none';
+      document.getElementById('spotify-player-container').style.display = 'block';
+      
+      showNotification('Trình phát Spotify đã sẵn sàng', 'success');
+      
+      // Lấy danh sách playlist của người dùng
+      fetchUserPlaylists();
+    });
+    
+    // Theo dõi thay đổi trạng thái
+    spotifyPlayer.addListener('player_state_changed', state => {
+      console.log('Spotify player state changed:', state ? 'New state' : 'No state');
+      if (!state) return;
+      
+      currentTrack = state.track_window.current_track;
+      isPlaying = !state.paused;
+      
+      // Cập nhật giao diện
+      updatePlayerUI(state);
+    });
+    
+    console.log('Đang kết nối Spotify Web Playback SDK...');
+    
+    // Kết nối đến Spotify
+    spotifyPlayer.connect().then(success => {
+      if (success) {
+        console.log('Spotify Web Playback SDK connected successfully');
+        showNotification('Kết nối Spotify thành công', 'success');
+      } else {
+        console.error('Failed to connect to Spotify Web Playback SDK');
+        showNotification('Không thể kết nối Spotify Playback SDK', 'error');
+        document.getElementById('spotify-not-connected').style.display = 'block';
+        document.getElementById('spotify-player-container').style.display = 'none';
+      }
+    }).catch(error => {
+      console.error('Error connecting to Spotify:', error);
+      showNotification('Lỗi khi kết nối với Spotify: ' + error.message, 'error');
+      document.getElementById('spotify-not-connected').style.display = 'block';
+      document.getElementById('spotify-player-container').style.display = 'none';
+    });
+    
+    // Thiết lập các sự kiện điều khiển
+    setupPlayerControls();
+  } catch (error) {
+    console.error('Lỗi không mong đợi khi thiết lập Spotify Player:', error);
+    showNotification('Lỗi không mong đợi: ' + error.message, 'error');
+    document.getElementById('spotify-not-connected').style.display = 'block';
+    document.getElementById('spotify-player-container').style.display = 'none';
+  }
+}
+
+// Hàm cập nhật giao diện trình phát
+function updatePlayerUI(state) {
+  if (!state || !state.track_window.current_track) return;
+  
+  const track = state.track_window.current_track;
+  
+  // Cập nhật thông tin bài hát
+  document.getElementById('track-name').textContent = track.name;
+  document.getElementById('track-artist').textContent = track.artists.map(artist => artist.name).join(', ');
+  
+  // Cập nhật hình ảnh
+  if (track.album.images && track.album.images.length > 0) {
+    document.getElementById('track-artwork').src = track.album.images[0].url;
+  }
+  
+  // Cập nhật nút phát/tạm dừng
+  const playButton = document.getElementById('spotify-play');
+  if (isPlaying) {
+    playButton.innerHTML = '<i class="fas fa-pause"></i>';
+  } else {
+    playButton.innerHTML = '<i class="fas fa-play"></i>';
+  }
+}
+
+// Thiết lập các điều khiển trình phát
+function setupPlayerControls() {
+  try {
+    console.log('Thiết lập các điều khiển trình phát Spotify');
+    
+    // Nút kết nối
+    const connectButton = document.getElementById('spotify-connect');
+    if (!connectButton) {
+      console.error('Không tìm thấy nút kết nối Spotify');
+      return;
+    }
+    
+    console.log('Đã tìm thấy nút kết nối Spotify, đang thiết lập sự kiện click');
+    connectButton.onclick = function(event) {
+      event.preventDefault();
+      console.log('Đã nhấp vào nút kết nối Spotify');
+      connectToSpotify();
+    };
+    
+    // Nút phát/tạm dừng
+    const playButton = document.getElementById('spotify-play');
+    if (playButton) {
+      playButton.addEventListener('click', () => {
+        if (!spotifyPlayer) return;
+        
+        if (isPlaying) {
+          spotifyPlayer.pause();
+        } else {
+          spotifyPlayer.resume();
+        }
+      });
+    }
+    
+    // Nút bài trước
+    const prevButton = document.getElementById('spotify-prev');
+    if (prevButton) {
+      prevButton.addEventListener('click', () => {
+        if (!spotifyPlayer) return;
+        spotifyPlayer.previousTrack();
+      });
+    }
+    
+    // Nút bài tiếp theo
+    const nextButton = document.getElementById('spotify-next');
+    if (nextButton) {
+      nextButton.addEventListener('click', () => {
+        if (!spotifyPlayer) return;
+        spotifyPlayer.nextTrack();
+      });
+    }
+    
+    // Điều chỉnh âm lượng
+    const volumeSlider = document.getElementById('volume-slider');
+    if (volumeSlider) {
+      volumeSlider.addEventListener('input', (e) => {
+        if (!spotifyPlayer) return;
+        const volume = parseInt(e.target.value) / 100;
+        spotifyPlayer.setVolume(volume);
+      });
+    }
+    
+    // Chọn playlist
+    const playlistSelector = document.getElementById('playlist-selector');
+    if (playlistSelector) {
+      playlistSelector.addEventListener('change', (e) => {
+        const playlistId = e.target.value;
+        if (!playlistId || !spotifyDeviceId) return;
+        
+        // Phát playlist được chọn
+        playPlaylist(playlistId);
+      });
+    }
+    
+    console.log('Đã thiết lập các sự kiện điều khiển Spotify thành công');
+  } catch (error) {
+    console.error('Lỗi khi thiết lập điều khiển Spotify:', error);
+  }
+}
+
+// Hàm kết nối với Spotify
+function connectToSpotify() {
+  console.log('Bắt đầu quá trình kết nối với Spotify');
+  
+  // Client ID của ứng dụng Spotify - đăng ký tại Spotify Developer Dashboard
+  const clientId = '3c2d2bc84d9747e6a8f83ae351a6eb0f'; // Client ID thực tế của bạn
+  const redirectUri = window.location.origin + '/staff/index.html';
+  
+  // Quyền cần yêu cầu từ người dùng
+  const scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private';
+  
+  // Tạo URL xác thực
+  const authUrl = 'https://accounts.spotify.com/authorize' +
+    '?response_type=token' +
+    '&client_id=' + encodeURIComponent(clientId) +
+    '&scope=' + encodeURIComponent(scope) +
+    '&redirect_uri=' + encodeURIComponent(redirectUri) +
+    '&show_dialog=true';
+  
+  console.log('URL xác thực Spotify:', authUrl);
+  
+  // Mở cửa sổ đăng nhập
+  const width = 450;
+  const height = 730;
+  const left = (window.screen.width / 2) - (width / 2);
+  const top = (window.screen.height / 2) - (height / 2);
+  
+  // Thông báo cho người dùng
+  showNotification('Đang mở cửa sổ xác thực Spotify...', 'info');
+  
+  // Mở popup để xác thực
+  const authWindow = window.open(
+    authUrl,
+    'Spotify Login',
+    'menubar=no,location=no,resizable=no,scrollbars=yes,status=no,width=' + width + ',height=' + height + ',top=' + top + ',left=' + left
+  );
+  
+  // Kiểm tra xem cửa sổ có bị chặn không
+  if (authWindow === null || typeof authWindow === 'undefined') {
+    console.error('Popup bị chặn bởi trình duyệt');
+    showNotification('Popup bị chặn. Vui lòng cho phép popup từ trang web này.', 'error');
+  } else {
+    console.log('Cửa sổ xác thực Spotify đã mở');
+  }
+}
+
+// Hàm lấy token từ URL sau khi xác thực
+function extractSpotifyToken() {
+  console.log('Kiểm tra token Spotify trong URL');
+  const hash = window.location.hash;
+  console.log('Hash URL:', hash);
+  
+  if (!hash || !hash.includes('access_token')) {
+    console.log('Không tìm thấy access_token trong URL hash');
+    return false;
+  }
+  
+  // Phân tích hash để lấy các tham số
+  const params = {};
+  hash.substring(1).split('&').forEach(pair => {
+    const [key, value] = pair.split('=');
+    params[key] = value;
+  });
+  
+  const token = params['access_token'];
+  const expiresIn = params['expires_in'];
+  
+  console.log('Đã tìm thấy token:', token ? 'Có' : 'Không');
+  console.log('Thời gian hết hạn:', expiresIn);
+  
+  if (token) {
+    // Lưu token vào localStorage
+    localStorage.setItem('spotifyToken', token);
+    spotifyToken = token;
+    
+    // Lưu thời gian hết hạn
+    const expiryTime = Date.now() + parseInt(expiresIn) * 1000;
+    localStorage.setItem('spotifyTokenExpiry', expiryTime);
+    
+    console.log('Đã lưu token Spotify, hết hạn sau:', new Date(expiryTime).toLocaleString());
+    
+    // Làm sạch URL hash
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Thông báo cửa sổ cha nếu đây là cửa sổ popup
+    if (window.opener && !window.opener.closed) {
+      console.log('Đang thông báo cho cửa sổ cha về token mới');
+      try {
+        // Gửi sự kiện thông báo token đã được lưu
+        window.opener.postMessage({ 
+          type: 'spotify-token-received', 
+          success: true,
+          token: token,
+          expiryTime: expiryTime
+        }, window.location.origin);
+        
+        console.log('Đã gửi thông báo thành công, đóng cửa sổ sau 1 giây');
+        // Đóng cửa sổ xác thực sau khi lưu token
+        setTimeout(() => window.close(), 1000);
+        return true;
+      } catch (error) {
+        console.error('Lỗi khi thông báo cửa sổ cha:', error);
+      }
+    } else {
+      // Nếu không phải popup (đang ở trang chính)
+      console.log('Không phải popup hoặc không tìm thấy cửa sổ cha, khởi tạo trình phát Spotify trực tiếp');
+      showNotification('Kết nối Spotify thành công!', 'success');
+      initSpotify();
+    }
+    
+    return true;
+  }
+  
+  console.log('Không thể lấy token từ URL hash');
+  return false;
+}
+
+// Thêm lắng nghe sự kiện message từ cửa sổ xác thực
+window.addEventListener('message', (event) => {
+  // Kiểm tra nguồn gốc để đảm bảo an toàn
+  if (event.origin !== window.location.origin) {
+    console.log('Từ chối tin nhắn từ nguồn không tin cậy:', event.origin);
+    return;
+  }
+  
+  console.log('Nhận tin nhắn từ cửa sổ khác:', event.data?.type);
+  
+  // Xử lý tin nhắn từ cửa sổ xác thực Spotify
+  if (event.data && event.data.type === 'spotify-token-received') {
+    console.log('Nhận thông báo token Spotify từ cửa sổ xác thực');
+    if (event.data.success) {
+      console.log('Xác thực Spotify thành công, cập nhật token');
+      
+      // Cập nhật token từ cửa sổ popup
+      if (event.data.token) {
+        spotifyToken = event.data.token;
+        localStorage.setItem('spotifyToken', spotifyToken);
+        
+        if (event.data.expiryTime) {
+          localStorage.setItem('spotifyTokenExpiry', event.data.expiryTime);
+          console.log('Token hết hạn sau:', new Date(event.data.expiryTime).toLocaleString());
+        }
+        
+        showNotification('Kết nối Spotify thành công!', 'success');
+        
+        // Khởi tạo trình phát
+        console.log('Khởi tạo trình phát Spotify với token mới');
+        initSpotify();
+      } else {
+        console.log('Không nhận được token trong tin nhắn');
+        // Thử lấy từ localStorage nếu đã được lưu bởi cửa sổ popup
+        spotifyToken = localStorage.getItem('spotifyToken');
+        
+        if (spotifyToken) {
+          console.log('Tìm thấy token trong localStorage, khởi tạo Spotify');
+          initSpotify();
+        }
+      }
+    } else {
+      console.log('Xác thực Spotify không thành công');
+      showNotification('Không thể kết nối Spotify. Vui lòng thử lại.', 'error');
+    }
+  }
+});
+
+// Hàm để lấy danh sách playlist của người dùng
+function fetchUserPlaylists() {
+  if (!spotifyToken) return;
+  
+  fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
+    headers: {
+      'Authorization': `Bearer ${spotifyToken}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token hết hạn
+        localStorage.removeItem('spotifyToken');
+        spotifyToken = null;
+        showNotification('Token Spotify hết hạn, vui lòng kết nối lại', 'error');
+        document.getElementById('spotify-not-connected').style.display = 'block';
+        document.getElementById('spotify-player-container').style.display = 'none';
+      }
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    // Cập nhật danh sách playlist
+    const playlistSelector = document.getElementById('playlist-selector');
+    playlistSelector.innerHTML = '<option value="">Chọn playlist</option>';
+    
+    data.items.forEach(playlist => {
+      const option = document.createElement('option');
+      option.value = playlist.id;
+      option.textContent = playlist.name;
+      playlistSelector.appendChild(option);
+    });
+  })
+  .catch(error => {
+    console.error('Error fetching playlists:', error);
+    showNotification('Không thể tải danh sách playlist', 'error');
+  });
+}
+
+// Hàm phát playlist
+function playPlaylist(playlistId) {
+  if (!spotifyToken || !spotifyDeviceId) return;
+  
+  fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${spotifyToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      context_uri: `spotify:playlist:${playlistId}`,
+      offset: { position: 0 },
+      position_ms: 0
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token hết hạn
+        localStorage.removeItem('spotifyToken');
+        spotifyToken = null;
+        showNotification('Token Spotify hết hạn, vui lòng kết nối lại', 'error');
+      } else {
+        throw new Error('Network response was not ok');
+      }
+    }
+    isPlaying = true;
+    document.getElementById('spotify-play').innerHTML = '<i class="fas fa-pause"></i>';
+  })
+  .catch(error => {
+    console.error('Error playing playlist:', error);
+    showNotification('Không thể phát playlist', 'error');
+  });
+}
+
+// Khởi tạo Spotify khi trang đã tải xong
+function initializeSpotifyFeature() {
+  console.log('Khởi tạo tính năng Spotify');
+  
+  // Kiểm tra token Spotify trong URL sau khi xác thực
+  const tokenExtracted = extractSpotifyToken();
+  console.log('Kết quả trích xuất token:', tokenExtracted);
+  
+  // Thay đổi trạng thái giao diện
+  const notConnectedElement = document.getElementById('spotify-not-connected');
+  const playerContainer = document.getElementById('spotify-player-container');
+  
+  // Kiểm tra token đã lưu
+  if (spotifyToken) {
+    console.log('Đã tìm thấy token trong localStorage');
+    
+    // Kiểm tra xem token đã hết hạn chưa
+    const tokenExpiry = localStorage.getItem('spotifyTokenExpiry');
+    console.log('Thời gian hết hạn token:', tokenExpiry ? new Date(parseInt(tokenExpiry)).toLocaleString() : 'Không có');
+    
+    if (tokenExpiry && parseInt(tokenExpiry) < Date.now()) {
+      console.log('Token Spotify đã hết hạn');
+      localStorage.removeItem('spotifyToken');
+      localStorage.removeItem('spotifyTokenExpiry');
+      spotifyToken = null;
+      
+      if (notConnectedElement) notConnectedElement.style.display = 'block';
+      if (playerContainer) playerContainer.style.display = 'none';
+      
+      showNotification('Phiên Spotify đã hết hạn, vui lòng kết nối lại', 'warning');
+    } else {
+      console.log('Token hợp lệ, khởi tạo trình phát Spotify');
+      initSpotify();
+    }
+  } else if (tokenExtracted) {
+    // Nếu vừa lấy được token mới từ URL
+    console.log('Vừa trích xuất token mới từ URL, khởi tạo trình phát');
+    initSpotify();
+  } else {
+    // Không có token
+    console.log('Không có token Spotify, hiển thị giao diện kết nối');
+    if (notConnectedElement) notConnectedElement.style.display = 'block';
+    if (playerContainer) playerContainer.style.display = 'none';
+  }
+}
+
 // Khởi tạo kết nối socket
 function initializeSocket() {
   const token = localStorage.getItem('auth_token');
@@ -129,6 +695,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Thiết lập sự kiện
   setupEventListeners();
+  
+  // Kiểm tra và xử lý token Spotify trong URL (cho trường hợp redirect sau khi xác thực)
+  setTimeout(() => {
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      console.log('Phát hiện token Spotify trong URL khi tải trang');
+      extractSpotifyToken();
+    }
+  }, 500);
 });
 
 // Kiểm tra trạng thái đăng nhập
@@ -1965,6 +2539,12 @@ function init() {
 
       // Thiết lập lọc phiên
       document.getElementById('session-filter').addEventListener('change', filterSessions);
+      
+      // Khởi tạo tính năng Spotify
+      initializeSpotifyFeature();
+      
+      // Thiết lập riêng nút kết nối Spotify
+      setupSpotifyConnectButton();
     })
     .catch(error => {
       console.error('Lỗi xác thực:', error);
@@ -2224,3 +2804,34 @@ function displayRecentRatings(ratings) {
   recentRatingsContainer.innerHTML = '';
   recentRatingsContainer.appendChild(table);
 }
+
+// Thêm hàm để kiểm tra DOM và thiết lập sự kiện Spotify
+function setupSpotifyConnectButton() {
+  console.log('Đang kiểm tra và thiết lập nút kết nối Spotify...');
+  
+  // Tìm nút kết nối
+  const connectButton = document.getElementById('spotify-connect');
+  if (!connectButton) {
+    console.error('Không tìm thấy nút kết nối Spotify');
+    
+    // Thử lại sau 1 giây (phòng trường hợp DOM chưa tải xong)
+    setTimeout(setupSpotifyConnectButton, 1000);
+    return;
+  }
+  
+  console.log('Đã tìm thấy nút kết nối Spotify, đang gắn sự kiện');
+  
+  // Gắn trực tiếp sự kiện onclick
+  connectButton.onclick = function() {
+    console.log('Nút kết nối Spotify được nhấp!');
+    showNotification('Đang kết nối Spotify...', 'info');
+    connectToSpotify();
+    return false; // Ngăn chặn hành vi mặc định
+  };
+}
+
+// Đăng ký hàm thiết lập Spotify khi trang đã tải xong
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM đã tải xong, thiết lập nút Spotify');
+  setupSpotifyConnectButton();
+});

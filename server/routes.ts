@@ -6,6 +6,7 @@ import supportRouter from "./routes/support";
 import authRouter from "./routes/auth";
 import contactRouter from "./routes/contact";
 import adminRouter from "./routes/admin";
+import spotifyRouter from "./routes/spotify";
 import { initializeSocket } from "./socket";
 import { initializeSocketServer } from "./io";
 import { storage } from "./storage";
@@ -40,6 +41,9 @@ export async function registerRoutes(app: Express) {
   
   app.use("/api/admin", adminRouter);
   console.log("Registered admin API routes at /api/admin");
+  
+  app.use("/api/spotify", spotifyRouter);
+  console.log("Registered spotify API routes at /api/spotify");
   
   // Route cho trang admin đặt trước static middleware
   app.get('/admin', (req, res) => {

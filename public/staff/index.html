@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống Hỗ trợ Khách hàng | Tectonic Devs</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/brands.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
 </head>
 
     <!-- Form đăng nhập -->
@@ -65,6 +66,48 @@
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Đăng xuất</span>
                 </button>
+                
+                <!-- Thêm phần Spotify player -->
+                <div class="spotify-player">
+                    <div class="spotify-header">
+                        <h3><i class="fab fa-spotify"></i> Spotify</h3>
+                        <button id="spotify-connect" class="spotify-connect-btn">
+                            <i class="fas fa-link"></i> Kết nối
+                        </button>
+                    </div>
+                    <div class="spotify-content">
+                        <div id="spotify-not-connected" class="spotify-message">
+                            <p>Kết nối Spotify để nghe nhạc trong khi làm việc</p>
+                            <button id="spotify-test-btn" onclick="connectToSpotify()" class="spotify-connect-btn" style="margin-top:10px;">
+                                <i class="fas fa-check"></i> Test Click
+                            </button>
+                        </div>
+                        <div id="spotify-player-container" class="spotify-player-container" style="display: none;">
+                            <div class="now-playing">
+                                <img id="track-artwork" src="" alt="Album artwork" class="track-artwork">
+                                <div class="track-info">
+                                    <div id="track-name" class="track-name">Không có bài hát nào</div>
+                                    <div id="track-artist" class="track-artist">Không có ca sĩ nào</div>
+                                </div>
+                            </div>
+                            <div class="player-controls">
+                                <button id="spotify-prev" class="control-btn"><i class="fas fa-step-backward"></i></button>
+                                <button id="spotify-play" class="control-btn control-btn-primary"><i class="fas fa-play"></i></button>
+                                <button id="spotify-next" class="control-btn"><i class="fas fa-step-forward"></i></button>
+                            </div>
+                            <div class="volume-controls">
+                                <i class="fas fa-volume-down"></i>
+                                <input type="range" id="volume-slider" min="0" max="100" value="50">
+                                <i class="fas fa-volume-up"></i>
+                            </div>
+                            <div class="playlists-section">
+                                <select id="playlist-selector" class="playlist-selector">
+                                    <option value="">Chọn playlist</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </nav>
 
