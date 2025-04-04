@@ -1,37 +1,59 @@
+// Biến toàn cục
+let socket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('Admin page loaded, checking authentication...');
+  // Kiểm tra token trước
+  refreshTokenIfNeeded();
+
   // Kiểm tra quyền admin trước khi hiển thị trang
   const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
   
+  console.log('Token found:', token ? 'Yes' : 'No');
+  
   if (!token) {
+    console.log('No token found, redirecting to login page');
     window.location.href = '/login.html';
     return;
   }
 
   // Xác thực với token
+  console.log('Verifying token with server...');
   fetch('/api/auth/verify', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   })
   .then(response => {
+    console.log('Token verification response:', response.status, response.statusText);
     if (response.ok) {
       return response.json();
     } else {
+      // Chuyển hướng về trang đăng nhập nếu token không hợp lệ
+      console.log('Token invalid, redirecting to login page');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       window.location.href = '/login.html';
       throw new Error('Not authenticated');
     }
   })
   .then(data => {
+    console.log('User data received:', data);
     // Sửa lại cách kiểm tra dữ liệu user trong phản hồi
     // Lấy user data trực tiếp từ phản hồi vì API trả về data
     const user = data;
     
+    // Kiểm tra quyền admin chỉ dựa vào role, giống như trang staff
     if (user.role !== 'admin') {
-      alert('Bạn không có quyền truy cập trang quản trị');
+      console.log('User is not admin, redirecting. Role:', user.role);
+      alert('Bạn không có quyền truy cập trang quản trị. Chỉ quản trị viên mới được phép truy cập.');
       window.location.href = '/coding-team-website.html';
       throw new Error('Not authorized');
     }
     
+    console.log('Admin access granted, initializing admin interface');
     // Hiển thị tên admin
     document.getElementById('admin-name').textContent = user.name || user.username;
     
@@ -49,6 +71,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize pattern management
     setupPatternModal();
+    
+    // Khởi tạo và xử lý kết nối socket
+    setTimeout(() => {
+      console.log('Initializing socket with delay...');
+      initializeSocket();
+    }, 1000); // Thêm delay 1 giây để đảm bảo trang đã load xong
     
     // Load patterns when tab is selected
     document.querySelector('[data-tab="chatbot-tab"]').addEventListener('click', function() {
@@ -1006,41 +1034,100 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function setupChatSocket(sessionId) {
-    // Kiểm tra xem socket đã tồn tại chưa
+  // Khởi tạo và xử lý kết nối socket
+  function initializeSocket() {
     if (socket) {
+      console.log('Disconnecting existing socket');
       socket.disconnect();
+      socket = null;
     }
+  
+    // Lấy token xác thực
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    // Khởi tạo kết nối socket.io
+    console.log('Initializing socket with token');
+    
+    // Kết nối socket với cấu hình đơn giản
     socket = io({
-      query: {
-        sessionId: sessionId
+      auth: { token }
+    });
+  
+    socket.on('connect', () => {
+      console.log('Socket connected successfully');
+      reconnectAttempts = 0;
+      
+      // Tham gia kênh support-staff
+      socket.emit('join-room', 'support-staff');
+    });
+  
+    socket.on('disconnect', (reason) => {
+      console.log(`Socket disconnected: ${reason}`);
+      
+      // Thử kết nối lại nếu bị ngắt không mong muốn
+      if (reason === 'transport error' || reason === 'ping timeout') {
+        attemptReconnect();
       }
     });
-    
-    socket.on('connect', () => {
-      console.log('Connected to socket.io server');
-      // Tham gia vào room với sessionId
-      socket.emit('join-room', sessionId);
-      socket.emit('join-room', 'support-staff');
-      socket.emit('join-chat', { sessionId: sessionId });
-    });
-    
-    socket.on('new-message', (message) => {
-      console.log('New message received:', message);
-      const messagesContainer = document.getElementById('chat-messages');
-      const messageEl = createMessageElement(message);
-      messagesContainer.appendChild(messageEl);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    });
-    
+  
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
+      attemptReconnect();
     });
-    
+  
     socket.on('error', (error) => {
       console.error('Socket error:', error);
+    });
+  }
+  
+  function attemptReconnect() {
+    reconnectAttempts++;
+    
+    if (reconnectAttempts < maxReconnectAttempts) {
+      console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+      
+      // Đợi một khoảng thời gian trước khi kết nối lại
+      setTimeout(() => {
+        if (socket) {
+          socket.connect();
+        } else {
+          initializeSocket();
+        }
+      }, 2000);
+    } else {
+      console.error('Max reconnection attempts reached');
+      // Có thể làm mới trang sau một khoảng thời gian
+      // setTimeout(() => window.location.reload(), 3000);
+    }
+  }
+  
+  // Thay thế hàm setupChatSocket hiện tại (nếu có) bằng hàm này
+  function setupChatSocket(sessionId) {
+    if (!socket || !socket.connected) {
+      console.log('Socket not connected, initializing...');
+      initializeSocket();
+    }
+    
+    // Tham gia vào phòng chat
+    socket.emit('join-room', sessionId);
+    socket.emit('join-chat', { sessionId });
+    
+    // Xóa tất cả listeners để tránh trùng lặp
+    socket.off('new-message');
+    
+    // Thêm listener mới
+    socket.on('new-message', (message) => {
+      console.log('Received message:', message);
+      
+      // Xử lý tin nhắn nhận được
+      const messageContainer = document.getElementById('chat-messages');
+      
+      // Kiểm tra tin nhắn đã hiện chưa
+      const existingMessage = document.querySelector(`.chat-message[data-id="${message.id}"]`);
+      if (!existingMessage) {
+        const messageElement = createMessageElement(message);
+        messageContainer.appendChild(messageElement);
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
     });
   }
 
@@ -1120,4 +1207,78 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return `${hours}:${minutes}`;
   }
+
+  function logout() {
+    localStorage.removeItem('auth_token');
+    sessionStorage.clear();
+    window.location.href = '/login';
+  }
+
+  // Hàm kiểm tra và làm mới token
+  function refreshTokenIfNeeded() {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    // Kiểm tra thời gian của token (nếu có)
+    try {
+      // Giải mã JWT để kiểm tra thời gian hết hạn
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const payload = JSON.parse(jsonPayload);
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      
+      // Nếu token gần hết hạn (còn dưới 5 phút)
+      if (expiryTime && (expiryTime - currentTime < 5 * 60 * 1000)) {
+        console.log('Token is about to expire, refreshing...');
+        // Gọi API làm mới token
+        fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Failed to refresh token');
+        })
+        .then(data => {
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+            console.log('Token refreshed successfully');
+          }
+        })
+        .catch(error => {
+          console.error('Error refreshing token:', error);
+        });
+      }
+    } catch (error) {
+      console.error('Error checking token expiry:', error);
+    }
+  }
+
+  // Thêm event listener cho page visibility
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      console.log('Page became visible, checking authentication status...');
+      // Kiểm tra lại authentication khi quay lại trang
+      refreshTokenIfNeeded();
+      
+      // Khởi tạo lại kết nối socket nếu cần
+      if (!socket || !socket.connected) {
+        console.log('Reinitializing socket connection...');
+        initializeSocket();
+      }
+    }
+  });
 });

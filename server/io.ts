@@ -82,8 +82,11 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
   io = new SocketServer(httpServer, {
     cors: {
       origin: "*",
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+      credentials: true
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   // Lưu storage vào biến global để có thể sử dụng trong các hàm khác
@@ -159,9 +162,19 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
     });
     
     // Xử lý ngắt kết nối
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
       console.log('Client disconnected');
-      console.log('Client disconnected:', clientSessionId);
+      console.log(`Client disconnected: ${clientSessionId}, reason: ${reason}`);
+      
+      // Xử lý dọn dẹp tài nguyên nếu cần
+      if (clientSessionId) {
+        socket.leave(clientSessionId);
+      }
+      
+      // Thông báo khi staff ngắt kết nối
+      if (isStaff) {
+        console.log('Staff member disconnected');
+      }
     });
   });
 

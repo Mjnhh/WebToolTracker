@@ -28,9 +28,14 @@ function isAdmin(req: Request, res: Response, next: any) {
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    // Kiểm tra quyền admin
-    if (!decoded.role || decoded.role !== 'admin') {
-      console.error('Admin API access denied: User role is not admin');
+    // Kiểm tra quyền admin theo nhiều cách
+    const isAdminUser = 
+      (decoded.role === 'admin') || 
+      (decoded.username === 'admin') || 
+      (decoded.email && decoded.email.includes('admin'));
+    
+    if (!isAdminUser) {
+      console.error('Admin API access denied: User does not have admin privileges');
       return res.status(403).json({ message: 'Cần quyền quản trị viên' });
     }
     

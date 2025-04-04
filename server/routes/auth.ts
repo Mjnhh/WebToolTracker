@@ -125,9 +125,8 @@ router.post('/register', async (req: Request, res: Response) => {
     const newUser = await storage.createUser({
       username,
       email,
-      password, // Trong thực tế nên hash password
-      name: name || username,
-      role: 'user' // Mặc định là user thường
+      password,
+      name: name || username
     });
 
     // Tạo token JWT
@@ -152,6 +151,51 @@ router.post('/register', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ message: 'Lỗi server khi đăng ký' });
+  }
+});
+
+// Làm mới token JWT
+router.post('/refresh', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Token không hợp lệ hoặc không được cung cấp' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Xác minh token hiện tại (vẫn sẽ xác minh ngay cả khi token đã hết hạn)
+    const decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }) as { 
+      id: number;
+      username: string; 
+      role: string;
+      name: string;
+    };
+    
+    // Lấy thông tin người dùng từ database
+    const user = await storage.getUserById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Người dùng không tồn tại' });
+    }
+    
+    // Tạo token JWT mới
+    const newToken = jwt.sign({ 
+      id: user.id, 
+      username: user.username,
+      role: user.role,
+      name: user.name
+    }, JWT_SECRET, { expiresIn: '7d' });
+    
+    // Trả về token mới
+    res.json({ 
+      token: newToken, 
+      message: 'Token đã được làm mới'
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({ message: 'Không thể làm mới token' });
   }
 });
 

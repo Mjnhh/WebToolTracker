@@ -28,7 +28,7 @@ export function initializeSocket(io: Server) {
           if (checkSession.metadata) {
             try {
               sessionMetadata = JSON.parse(checkSession.metadata);
-              isHumanAssigned = Boolean(sessionMetadata.isHumanAssigned);
+              isHumanAssigned = Boolean((sessionMetadata as { isHumanAssigned?: boolean }).isHumanAssigned);
               console.log(`Chatbot checking session ${data.sessionId} - isHumanAssigned: ${isHumanAssigned}`);
             } catch (e) {
               console.error('Error parsing session metadata:', e);
@@ -156,8 +156,30 @@ export function initializeSocket(io: Server) {
       }
     });
     
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
       console.log('Client disconnected:', sessionId);
+      console.log(`Client disconnected with reason: ${reason}`);
+      
+      // Rời khỏi các phòng
+      if (sessionId) {
+        socket.leave(`chat:${sessionId}`);
+        socket.leave(sessionId);
+      }
+      
+      // Có thể thực hiện xử lý dọn dẹp nếu cần
+      // Ví dụ: đánh dấu session không hoạt động nếu khách hàng ngắt kết nối
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error(`Socket connection error for session ${sessionId}:`, error.message);
+    });
+
+    socket.on('connect_timeout', () => {
+      console.error(`Socket connection timeout for session ${sessionId}`);
+    });
+
+    socket.on('error', (error) => {
+      console.error(`Socket error for session ${sessionId}:`, error);
     });
   });
 } 

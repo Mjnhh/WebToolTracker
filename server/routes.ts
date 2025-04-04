@@ -9,6 +9,12 @@ import adminRouter from "./routes/admin";
 import { initializeSocket } from "./socket";
 import { initializeSocketServer } from "./io";
 import { storage } from "./storage";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Lấy __dirname trong ES modules (vì __dirname không tồn tại trong ES modules)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express) {
   const server = createServer(app);
@@ -35,15 +41,17 @@ export async function registerRoutes(app: Express) {
   app.use("/api/admin", adminRouter);
   console.log("Registered admin API routes at /api/admin");
   
+  // Route cho trang admin đặt trước static middleware
+  app.get('/admin', (req, res) => {
+    console.log("Serving admin page...");
+    // Đơn giản hóa bằng cách sử dụng đường dẫn tuyệt đối
+    res.sendFile(path.join(process.cwd(), 'public/admin-control-panel.html'));
+  });
+  console.log("Registered admin page route at /admin");
+  
   // Phục vụ các trang tĩnh từ thư mục public
   app.use(express.static("public"));
   console.log("Serving static files from 'public' directory");
-  
-  // Route cho trang admin
-  app.get('/admin', (req, res) => {
-    res.sendFile('admin-control-panel.html', { root: 'public' });
-  });
-  console.log("Registered admin page route at /admin");
   
   // Basic health check route
   app.get('/health', (req, res) => {
@@ -51,11 +59,12 @@ export async function registerRoutes(app: Express) {
   });
   console.log("Registered health check route at /health");
   
-  // Fallback route - redirect về trang chính
+  // Đơn giản hóa route fallback
   app.get('*', (req, res) => {
-    res.sendFile('coding-team-website.html', { root: 'public' });
+    console.log(`Fallback route for: ${req.originalUrl}`);
+    res.sendFile(path.join(process.cwd(), 'public/coding-team-website.html'));
   });
-  console.log("Registered fallback route to coding-team-website.html");
+  console.log("Registered fallback route");
   
   return server;
 }
