@@ -246,169 +246,15 @@
                                 </select>
                             </label>
                         </div>
-                    </div>
-                    
-                    <div class="settings-group">
-                        <h3>Thông báo</h3>
                         <div class="setting-item">
                             <label>
-                                <span>Âm thanh thông báo</span>
-                                <input type="checkbox" id="notification-sound" checked>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <span>Thông báo desktop</span>
-                                <input type="checkbox" id="desktop-notifications" checked>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
-            </section>
-
-            <!-- Phần thống kê -->
-            <section id="stats-section" class="content-section">
-                <header class="content-header">
-                    <div class="header-title">
-                        <h2>Thống kê</h2>
-                        <p class="subtitle">Thông tin hiệu suất và thống kê phiên hỗ trợ</p>
-                    </div>
-                    <div class="header-actions">
-                        <select class="filter-select">
-                            <option value="today">Hôm nay</option>
-                            <option value="week">Tuần này</option>
-                            <option value="month">Tháng này</option>
-                            <option value="custom">Tùy chỉnh</option>
-                        </select>
-                    </div>
-                </header>
-
-                <div class="stats-dashboard">
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-comments"></i></div>
-                            <div class="stat-content">
-                                <h3>Tổng số phiên</h3>
-                                <p class="stat-value">0</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-content">
-                                <h3>Hoàn thành</h3>
-                                <p class="stat-value">0</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                            <div class="stat-content">
-                                <h3>Thời gian trung bình</h3>
-                                <p class="stat-value">0 phút</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-star"></i></div>
-                            <div class="stat-content">
-                                <h3>Đánh giá</h3>
-                                <p class="stat-value">0/5</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-charts">
-                        <div class="chart-container">
-                            <h3>Biểu đồ sẽ hiển thị ở đây</h3>
-                            <p>Tính năng đang phát triển</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Phần mẫu câu -->
-            <section id="templates-section" class="content-section">
-                <header class="content-header">
-                    <div class="header-title">
-                        <h2>Mẫu câu trả lời</h2>
-                        <p class="subtitle">Quản lý các mẫu câu trả lời nhanh</p>
-                    </div>
-                    <div class="header-actions">
-                        <button id="add-template-btn" class="action-button">
-                            <i class="fas fa-plus"></i> Thêm mẫu mới
-                        </button>
-                    </div>
-                </header>
-
-                <div class="templates-container">
-                    <div class="templates-list">
-                        <div class="template-item">
-                            <div class="template-content">
-                                <p>Xin chào! Tôi là ${name} từ bộ phận hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?</p>
-                            </div>
-                            <div class="template-actions">
-                                <button class="template-edit-btn"><i class="fas fa-edit"></i></button>
-                                <button class="template-delete-btn"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <div class="template-item">
-                            <div class="template-content">
-                                <p>Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ xem xét vấn đề này và phản hồi sớm nhất có thể.</p>
-                            </div>
-                            <div class="template-actions">
-                                <button class="template-edit-btn"><i class="fas fa-edit"></i></button>
-                                <button class="template-delete-btn"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <div class="template-item">
-                            <div class="template-content">
-                                <p>Bạn có thể cung cấp thêm thông tin chi tiết về vấn đề bạn đang gặp phải không?</p>
-                            </div>
-                            <div class="template-actions">
-                                <button class="template-edit-btn"><i class="fas fa-edit"></i></button>
-                                <button class="template-delete-btn"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Phần cài đặt -->
-            <section id="settings-section" class="content-section">
-                <header class="content-header">
-                    <div class="header-title">
-                        <h2>Cài đặt</h2>
-                        <p class="subtitle">Tùy chỉnh giao diện và thông báo</p>
-                    </div>
-                    <div class="header-actions">
-                        <button id="save-settings" class="action-button">
-                            <i class="fas fa-save"></i> Lưu cài đặt
-                        </button>
-                    </div>
-                </header>
-
-                <div class="settings-container">
-                    <div class="settings-group">
-                        <h3>Giao diện</h3>
-                        <div class="setting-item">
-                            <label>
-                                <span>Chế độ tối</span>
-                                <input type="checkbox" id="dark-mode-toggle">
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <span>Kích thước font</span>
-                                <select id="font-size-setting">
-                                    <option value="small">Nhỏ</option>
-                                    <option value="medium" selected>Vừa</option>
-                                    <option value="large">Lớn</option>
+                                <span>Theme màu</span>
+                                <select id="color-theme">
+                                    <option value="default">Mặc định (Indigo)</option>
+                                    <option value="blue">Xanh dương</option>
+                                    <option value="green">Xanh lá</option>
+                                    <option value="purple">Tím</option>
+                                    <option value="orange">Cam</option>
                                 </select>
                             </label>
                         </div>
@@ -426,6 +272,23 @@
                             <label>
                                 <span>Thông báo desktop</span>
                                 <input type="checkbox" id="desktop-notifications" checked>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Tự động trả lời</h3>
+                        <div class="setting-item">
+                            <label>
+                                <span>Bật tự động trả lời</span>
+                                <input type="checkbox" id="auto-reply">
+                            </label>
+                            <p class="setting-description">Tin nhắn tự động sẽ được gửi khi có khách hàng mới bắt đầu cuộc trò chuyện</p>
+                        </div>
+                        <div id="auto-reply-content-wrapper" class="setting-item content-field" style="display: none;">
+                            <label>
+                                <span>Nội dung tin nhắn tự động</span>
+                                <textarea id="auto-reply-content" rows="4">Cảm ơn bạn đã liên hệ. Nhân viên sẽ phản hồi trong thời gian sớm nhất.</textarea>
                             </label>
                         </div>
                     </div>

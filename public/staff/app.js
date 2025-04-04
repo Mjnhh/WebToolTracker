@@ -26,16 +26,39 @@ function initializeSocket() {
 
   socket.on('new-support-request', (session) => {
     console.log('Received new support request:', session);
+    
+    // Phát âm thanh thông báo
+    playNotificationSound('new-session');
+    
+    // Hiển thị thông báo desktop
+    showDesktopNotification('Phiên chat mới', 'Có khách hàng mới cần hỗ trợ');
+    
     // Thêm session mới vào danh sách
     if (!sessionList.some(s => s.id === session.id)) {
       sessionList.push(session);
       updateSessionsList();
+      
+      // Kiểm tra và gửi tin nhắn tự động nếu đã bật
+      if (localStorage.getItem('auto-reply') === 'true') {
+        sendAutoReply(session.id);
+      }
     }
   });
 
   // Lắng nghe tin nhắn mới từ socket
   socket.on('new-message', (message) => {
     console.log('Nhận tin nhắn mới qua socket:', message);
+    
+    // Thông báo khi có tin nhắn mới từ khách hàng
+    if (message.sender === 'user') {
+      // Phát âm thanh thông báo
+      playNotificationSound('message');
+      
+      // Hiển thị thông báo desktop nếu không phải là phiên đang mở
+      if (message.sessionId !== currentSessionId) {
+        showDesktopNotification('Tin nhắn mới', 'Có tin nhắn mới từ khách hàng');
+      }
+    }
     
     // Kiểm tra xem tin nhắn có thuộc phiên hiện tại và có ID hợp lệ không
     if (!message || !message.id || !message.sessionId || message.sessionId !== currentSessionId) {
@@ -48,11 +71,10 @@ function initializeSocket() {
     // 2. Tìm tin nhắn tạm thời tương ứng
     const tempId = tempMessageMap.get(message.id);
     if (tempId) {
-      // Tìm phần tử tạm trong DOM
-      const tempElement = document.querySelector(`.message-item[data-message-id="${tempId}"]`);
+      console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
+      // Cập nhật ID
+      const tempElement = document.querySelector(`.message-item[data-temp-ref="${message.id}"]`);
       if (tempElement) {
-        console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
-        // Cập nhật ID
         tempElement.dataset.messageId = message.id;
         delete tempElement.dataset.tempRef;
         
@@ -287,17 +309,300 @@ function setupSettings() {
     });
   }
   
-  // Lưu cài đặt
+  // Thiết lập âm thanh thông báo
+  const notificationSoundToggle = document.getElementById('notification-sound');
+  if (notificationSoundToggle) {
+    // Kiểm tra cài đặt đã lưu
+    const notificationSound = localStorage.getItem('notification-sound') !== 'false';
+    notificationSoundToggle.checked = notificationSound;
+    
+    notificationSoundToggle.addEventListener('change', () => {
+      localStorage.setItem('notification-sound', notificationSoundToggle.checked);
+      // Kiểm tra thiết lập ngay lập tức
+      if (notificationSoundToggle.checked) {
+        playNotificationSound('test');
+      }
+    });
+  }
+  
+  // Thiết lập thông báo desktop
+  const desktopNotificationsToggle = document.getElementById('desktop-notifications');
+  if (desktopNotificationsToggle) {
+    // Kiểm tra cài đặt đã lưu và quyền thông báo
+    const desktopNotificationsEnabled = localStorage.getItem('desktop-notifications') !== 'false';
+    desktopNotificationsToggle.checked = desktopNotificationsEnabled;
+    
+    desktopNotificationsToggle.addEventListener('change', () => {
+      if (desktopNotificationsToggle.checked) {
+        // Yêu cầu quyền thông báo
+        requestNotificationPermission();
+      }
+      localStorage.setItem('desktop-notifications', desktopNotificationsToggle.checked);
+    });
+    
+    // Kiểm tra quyền thông báo khi tải trang
+    checkNotificationPermission();
+  }
+  
+  // Thiết lập tự động trả lời
+  const autoReplyToggle = document.getElementById('auto-reply');
+  if (autoReplyToggle) {
+    // Kiểm tra cài đặt đã lưu
+    const autoReplyEnabled = localStorage.getItem('auto-reply') === 'true';
+    autoReplyToggle.checked = autoReplyEnabled;
+    
+    autoReplyToggle.addEventListener('change', () => {
+      localStorage.setItem('auto-reply', autoReplyToggle.checked);
+      
+      // Hiện/ẩn textarea cài đặt nội dung tự động trả lời
+      const autoReplyContentWrapper = document.getElementById('auto-reply-content-wrapper');
+      if (autoReplyContentWrapper) {
+        autoReplyContentWrapper.style.display = autoReplyToggle.checked ? 'block' : 'none';
+      }
+    });
+    
+    // Khởi tạo hiển thị textarea dựa trên trạng thái
+    const autoReplyContentWrapper = document.getElementById('auto-reply-content-wrapper');
+    if (autoReplyContentWrapper) {
+      autoReplyContentWrapper.style.display = autoReplyEnabled ? 'block' : 'none';
+    }
+    
+    // Lưu nội dung tự động trả lời
+    const autoReplyContent = document.getElementById('auto-reply-content');
+    if (autoReplyContent) {
+      // Lấy nội dung đã lưu
+      autoReplyContent.value = localStorage.getItem('auto-reply-content') || 'Cảm ơn bạn đã liên hệ. Nhân viên sẽ phản hồi trong thời gian sớm nhất.';
+      
+      // Lắng nghe sự kiện thay đổi
+      autoReplyContent.addEventListener('input', () => {
+        localStorage.setItem('auto-reply-content', autoReplyContent.value);
+      });
+    }
+  }
+  
+  // Thiết lập theme màu
+  const colorThemeSelect = document.getElementById('color-theme');
+  if (colorThemeSelect) {
+    // Kiểm tra cài đặt đã lưu
+    const colorTheme = localStorage.getItem('color-theme') || 'default';
+    colorThemeSelect.value = colorTheme;
+    
+    // Áp dụng theme màu
+    applyColorTheme(colorTheme);
+    
+    colorThemeSelect.addEventListener('change', () => {
+      const selectedTheme = colorThemeSelect.value;
+      applyColorTheme(selectedTheme);
+      localStorage.setItem('color-theme', selectedTheme);
+    });
+  }
+  
+  // Lưu tất cả cài đặt
   const saveSettingsBtn = document.getElementById('save-settings');
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', () => {
       // Hiển thị thông báo đã lưu
-      alert('Đã lưu cài đặt của bạn!');
+      showNotification('Đã lưu cài đặt của bạn!', 'success');
     });
   }
   
   // Cài đặt mẫu câu trả lời
   setupTemplates();
+}
+
+// Áp dụng theme màu
+function applyColorTheme(theme) {
+  // Xóa tất cả class theme cũ
+  document.body.classList.remove('theme-default', 'theme-blue', 'theme-green', 'theme-purple', 'theme-orange');
+  
+  // Thêm class theme mới
+  document.body.classList.add(`theme-${theme}`);
+  
+  // Cập nhật biến CSS tương ứng với theme
+  switch (theme) {
+    case 'blue':
+      document.documentElement.style.setProperty('--primary-color', '#3B82F6');
+      document.documentElement.style.setProperty('--primary-light', '#60A5FA');
+      document.documentElement.style.setProperty('--primary-dark', '#2563EB');
+      document.documentElement.style.setProperty('--background-gradient', 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)');
+      break;
+    case 'green':
+      document.documentElement.style.setProperty('--primary-color', '#10B981');
+      document.documentElement.style.setProperty('--primary-light', '#34D399');
+      document.documentElement.style.setProperty('--primary-dark', '#059669');
+      document.documentElement.style.setProperty('--background-gradient', 'linear-gradient(135deg, #10B981 0%, #059669 100%)');
+      break;
+    case 'purple':
+      document.documentElement.style.setProperty('--primary-color', '#8B5CF6');
+      document.documentElement.style.setProperty('--primary-light', '#A78BFA');
+      document.documentElement.style.setProperty('--primary-dark', '#7C3AED');
+      document.documentElement.style.setProperty('--background-gradient', 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)');
+      break;
+    case 'orange':
+      document.documentElement.style.setProperty('--primary-color', '#F59E0B');
+      document.documentElement.style.setProperty('--primary-light', '#FBBF24');
+      document.documentElement.style.setProperty('--primary-dark', '#D97706');
+      document.documentElement.style.setProperty('--background-gradient', 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)');
+      break;
+    default: // Default theme (indigo)
+      document.documentElement.style.setProperty('--primary-color', '#6366F1');
+      document.documentElement.style.setProperty('--primary-light', '#818CF8');
+      document.documentElement.style.setProperty('--primary-dark', '#4F46E5');
+      document.documentElement.style.setProperty('--background-gradient', 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)');
+      break;
+  }
+}
+
+// Xử lý thông báo desktop
+function checkNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.log('Trình duyệt này không hỗ trợ thông báo desktop');
+    const desktopNotificationsToggle = document.getElementById('desktop-notifications');
+    if (desktopNotificationsToggle) {
+      desktopNotificationsToggle.checked = false;
+      desktopNotificationsToggle.disabled = true;
+    }
+    return;
+  }
+  
+  if (Notification.permission === 'denied') {
+    console.log('Quyền thông báo đã bị từ chối');
+    const desktopNotificationsToggle = document.getElementById('desktop-notifications');
+    if (desktopNotificationsToggle) {
+      desktopNotificationsToggle.checked = false;
+    }
+  }
+}
+
+function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    return;
+  }
+  
+  Notification.requestPermission().then(permission => {
+    if (permission !== 'granted') {
+      console.log('Quyền thông báo không được cấp');
+      const desktopNotificationsToggle = document.getElementById('desktop-notifications');
+      if (desktopNotificationsToggle) {
+        desktopNotificationsToggle.checked = false;
+      }
+    }
+  });
+}
+
+// Hiển thị thông báo desktop
+function showDesktopNotification(title, message) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return;
+  }
+  
+  // Kiểm tra xem người dùng có bật thông báo desktop không
+  if (localStorage.getItem('desktop-notifications') === 'false') {
+    return;
+  }
+  
+  const notification = new Notification(title, {
+    body: message,
+    icon: '/logo.png'
+  });
+  
+  notification.onclick = function() {
+    window.focus();
+    this.close();
+  };
+  
+  // Tự đóng sau 5 giây
+  setTimeout(() => notification.close(), 5000);
+}
+
+// Phát âm thanh thông báo
+function playNotificationSound(type) {
+  // Kiểm tra xem người dùng có bật âm thanh thông báo không
+  if (localStorage.getItem('notification-sound') === 'false') {
+    return;
+  }
+  
+  let sound;
+  switch (type) {
+    case 'message':
+      sound = new Audio('/sounds/message.mp3');
+      break;
+    case 'new-session':
+      sound = new Audio('/sounds/new-session.mp3');
+      break;
+    case 'test':
+      sound = new Audio('/sounds/test-notification.mp3');
+      break;
+    default:
+      sound = new Audio('/sounds/notification.mp3');
+      break;
+  }
+  
+  sound.play().catch(error => {
+    console.error('Không thể phát âm thanh thông báo:', error);
+  });
+}
+
+// Hiển thị thông báo trong ứng dụng
+function showNotification(message, type = 'info') {
+  // Kiểm tra xem container thông báo đã tồn tại chưa
+  let notificationContainer = document.getElementById('notification-container');
+  
+  if (!notificationContainer) {
+    // Tạo container nếu chưa tồn tại
+    notificationContainer = document.createElement('div');
+    notificationContainer.id = 'notification-container';
+    document.body.appendChild(notificationContainer);
+  }
+  
+  // Tạo thông báo mới
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  
+  // Thêm icon dựa vào loại thông báo
+  let icon = '';
+  switch (type) {
+    case 'success':
+      icon = '<i class="fas fa-check-circle"></i>';
+      break;
+    case 'error':
+      icon = '<i class="fas fa-exclamation-circle"></i>';
+      break;
+    case 'warning':
+      icon = '<i class="fas fa-exclamation-triangle"></i>';
+      break;
+    default:
+      icon = '<i class="fas fa-info-circle"></i>';
+      break;
+  }
+  
+  notification.innerHTML = `
+    <div class="notification-icon">${icon}</div>
+    <div class="notification-content">${message}</div>
+    <button class="notification-close"><i class="fas fa-times"></i></button>
+  `;
+  
+  // Thêm vào container
+  notificationContainer.appendChild(notification);
+  
+  // Thêm nút đóng thông báo
+  const closeButton = notification.querySelector('.notification-close');
+  closeButton.addEventListener('click', () => {
+    notification.classList.add('notification-hide');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  });
+  
+  // Tự động đóng sau 5 giây
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.classList.add('notification-hide');
+      setTimeout(() => {
+        notification.remove();
+      }, 300);
+    }
+  }, 5000);
 }
 
 // Thiết lập mẫu câu trả lời
@@ -1125,4 +1430,38 @@ function closeChatSession() {
 // updateSessionsList function was missing from original code, adding a placeholder
 function updateSessionsList(){
     //Add your implementation here
+}
+
+// Gửi tin nhắn tự động
+function sendAutoReply(sessionId) {
+  const token = localStorage.getItem('auth_token');
+  if (!token) return;
+  
+  // Lấy nội dung tin nhắn tự động từ cài đặt
+  const autoReplyContent = localStorage.getItem('auto-reply-content') || 
+                          'Cảm ơn bạn đã liên hệ. Nhân viên sẽ phản hồi trong thời gian sớm nhất.';
+  
+  fetch(`${API_BASE_URL}/support/message`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      sessionId: sessionId,
+      content: autoReplyContent
+    })
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to send auto-reply message');
+  })
+  .then(sentMessage => {
+    console.log('Đã gửi tin nhắn tự động:', sentMessage);
+  })
+  .catch(error => {
+    console.error('Error sending auto-reply message:', error);
+  });
 }
