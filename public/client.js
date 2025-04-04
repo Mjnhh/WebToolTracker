@@ -124,26 +124,54 @@ function connectSocket(chatSessionId) {
   socket = io({
     query: {
       sessionId: chatSessionId
-    }
+    },
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    timeout: 10000
   });
   
   // Xử lý sự kiện kết nối
   socket.on('connect', () => {
-    console.log('Socket connected');
+    console.log('Socket connected with session ID:', chatSessionId);
     
-    // Tham gia phòng chat
+    // Tham gia phòng chat với sessionId
     socket.emit('join-room', chatSessionId);
+    
+    // Thêm tham gia vào phòng chat:sessionId
+    socket.emit('join-room', `chat:${chatSessionId}`);
+    
+    // Thông báo đã kết nối
+    console.log(`Client joined rooms: ${chatSessionId} and chat:${chatSessionId}`);
+    
+    // Thiết lập ping định kỳ để duy trì kết nối socket
+    startPingInterval();
   });
   
   // Xử lý tin nhắn mới
   socket.on('new-message', (message) => {
-    console.log('New message received:', message);
+    // Thêm thời gian nhận để debug
+    const receiveTime = new Date().toISOString();
+    console.log(`New message received at ${receiveTime}:`, message);
+    
+    // Log chi tiết hơn để debug
+    console.log(`Message details - ID: ${message.id}, Sender: ${message.sender}, Content: "${message.content}"`);
     
     // Kiểm tra xem tin nhắn đã được hiển thị chưa
+    const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
+    if (existingMessage) {
+      console.log(`Duplicate message found in DOM, ignoring: ${message.id}`);
+      return;
+    }
+    
     const isDuplicate = messages.some(m => m.id === message.id);
     if (isDuplicate) {
-      console.log('Duplicate message, ignoring:', message.id);
+      console.log('Duplicate message in array, ignoring:', message.id);
       return;
+    }
+    
+    // Kiểm tra đặc biệt cho tin nhắn từ staff
+    if (message.sender === 'staff') {
+      console.log('Staff message received, ensuring it gets displayed');
     }
     
     // Thêm vào danh sách tin nhắn
@@ -158,6 +186,11 @@ function connectSocket(chatSessionId) {
     // Hiển thị chat nếu là tin nhắn từ bot hoặc nhân viên
     if (message.sender === 'bot' || message.sender === 'staff') {
       showChat();
+    }
+    
+    // Phát tiếng thông báo khi có tin nhắn mới từ staff
+    if (message.sender === 'staff') {
+      playNotificationSound();
     }
   });
   
@@ -176,7 +209,7 @@ function connectSocket(chatSessionId) {
     appendMessage(staffJoinedMessage);
     scrollToBottom();
   });
-  
+
   // Xử lý khi phiên hỗ trợ kết thúc
   socket.on('support-ended', () => {
     console.log('Support session ended');
@@ -192,16 +225,179 @@ function connectSocket(chatSessionId) {
     appendMessage(supportEndedMessage);
     scrollToBottom();
   });
+
+  // Xử lý mất kết nối
+  socket.on('disconnect', (reason) => {
+    console.log(`Socket disconnected: ${reason}`);
+    
+    // Hiển thị thông báo mất kết nối cho người dùng
+    const disconnectMessage = {
+      id: 'system-' + Date.now(),
+      content: 'Mất kết nối với máy chủ. Đang thử kết nối lại...',
+      sender: 'system',
+      timestamp: new Date().toISOString()
+    };
+    
+    appendMessage(disconnectMessage);
+    
+    // Dừng ping interval khi mất kết nối
+    stopPingInterval();
+    
+    // Tự động thử kết nối lại
+    setTimeout(() => {
+      if (!socket.connected) {
+        console.log('Attempting to reconnect automatically...');
+        connectSocket(chatSessionId);
+      }
+    }, 5000);
+  });
   
-  // Xử lý lỗi kết nối
+  // Xử lý các sự kiện khác
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error);
+    // Thử kết nối lại sau 5 giây
+    setTimeout(() => {
+      console.log('Attempting to reconnect...');
+      socket.connect();
+    }, 5000);
+  });
+
+  socket.on('reconnect', (attemptNumber) => {
+    console.log(`Socket reconnected after ${attemptNumber} attempts`);
+    
+    // Thông báo kết nối lại thành công
+    const reconnectMessage = {
+      id: 'system-' + Date.now(),
+      content: 'Đã kết nối lại thành công!',
+      sender: 'system',
+      timestamp: new Date().toISOString()
+    };
+    
+    appendMessage(reconnectMessage);
+    
+    // Tham gia lại phòng chat sau khi kết nối lại
+    socket.emit('join-room', chatSessionId);
+    socket.emit('join-room', `chat:${chatSessionId}`);
+    
+    // Tải lại tin nhắn để đảm bảo không bỏ lỡ tin nhắn nào
+    fetchMessages(chatSessionId);
+    
+    // Bắt đầu lại ping interval
+    startPingInterval();
   });
   
-  // Xử lý mất kết nối
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected');
+  // Ping để đảm bảo kết nối vẫn hoạt động
+  socket.on('pong', () => {
+    console.log('Received pong from server, connection is alive');
+    updateConnectionStatus(true);
   });
+}
+
+// Biến lưu trữ interval ID
+let pingIntervalId = null;
+
+// Bắt đầu gửi ping định kỳ để duy trì kết nối
+function startPingInterval() {
+  // Dừng interval cũ nếu có
+  stopPingInterval();
+  
+  // Tạo interval mới, ping mỗi 30 giây
+  pingIntervalId = setInterval(() => {
+    if (socket && socket.connected) {
+      console.log('Sending ping to server...');
+      socket.emit('ping', { timestamp: Date.now() });
+      
+      // Tự động tải lại tin nhắn mỗi lần ping
+      if (sessionId) {
+        fetchMessages(sessionId);
+      }
+    } else {
+      console.log('Socket disconnected, stopping ping interval');
+      stopPingInterval();
+    }
+  }, 30000); // 30 giây
+  
+  console.log('Started ping interval to keep connection alive');
+}
+
+// Dừng ping interval
+function stopPingInterval() {
+  if (pingIntervalId) {
+    clearInterval(pingIntervalId);
+    pingIntervalId = null;
+    console.log('Stopped ping interval');
+  }
+}
+
+// Cập nhật trạng thái kết nối trên giao diện
+function updateConnectionStatus(isConnected) {
+  const statusElement = document.getElementById('connection-status');
+  if (statusElement) {
+    if (isConnected) {
+      statusElement.className = 'connection-status connected';
+      statusElement.title = 'Đã kết nối đến máy chủ';
+    } else {
+      statusElement.className = 'connection-status disconnected';
+      statusElement.title = 'Đã mất kết nối với máy chủ';
+    }
+  }
+}
+
+// Phát âm thanh thông báo khi có tin nhắn mới từ nhân viên
+function playNotificationSound() {
+  try {
+    const audio = new Audio('/sounds/notification.mp3');
+    audio.play().catch(error => {
+      console.log('Không thể phát âm thanh thông báo:', error);
+    });
+  } catch (e) {
+    console.error('Error playing notification sound:', e);
+  }
+}
+
+// Tải lại tin nhắn từ server để đảm bảo không bỏ lỡ tin nhắn nào
+function fetchMessages(sessionId) {
+  if (!sessionId) return;
+  
+  fetch(`/api/chat/messages/${sessionId}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log(`Fetched ${data.length} messages for session ${sessionId}`);
+      
+      // Thêm tin nhắn mới vào danh sách
+      data.forEach(message => {
+        // Kiểm tra xem tin nhắn đã tồn tại chưa
+        const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
+        if (existingMessage) {
+          // Tin nhắn đã tồn tại, bỏ qua
+          return;
+        }
+        
+        // Kiểm tra xem tin nhắn đã có trong mảng chưa
+        const isDuplicate = messages.some(m => m.id === message.id);
+        if (isDuplicate) {
+          // Tin nhắn đã có trong mảng, bỏ qua
+          return;
+        }
+        
+        // Thêm tin nhắn mới
+        messages.push(message);
+        appendMessage(message);
+      });
+      
+      // Cuộn xuống cuối nếu có tin nhắn mới
+      if (data.length > messages.length) {
+        scrollToBottom();
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching messages:', error);
+    });
 }
 
 // Hiển thị danh sách tin nhắn
@@ -387,4 +583,27 @@ function toggleChat() {
   } else {
     hideChat();
   }
+}
+
+// Khởi tạo chatbot
+function initializeChatbot() {
+  // Xác định session ID
+  sessionId = localStorage.getItem('chat_session_id');
+  
+  if (!sessionId) {
+    // Tạo session ID mới nếu chưa có
+    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chat_session_id', sessionId);
+  }
+  
+  console.log('Initializing chatbot with session ID:', sessionId);
+  
+  // Kết nối socket với session ID
+  connectSocket(sessionId);
+  
+  // Tải tin nhắn cũ (nếu có)
+  fetchChatHistory();
+  
+  // Thiết lập sự kiện cho form gửi tin nhắn
+  setupEventHandlers();
 } 

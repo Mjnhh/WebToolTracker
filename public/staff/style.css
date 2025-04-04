@@ -675,3 +675,142 @@ body {
     transform: translateX(0);
   }
 }
+
+/* CSS cho trạng thái kết nối */
+.header-controls {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 20px;
+}
+
+.connection-status-container,
+.notification-controls {
+  display: flex;
+  align-items: center;
+  margin-left: 15px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.status-indicator.online {
+  background-color: #4caf50;
+  box-shadow: 0 0 5px #4caf50;
+}
+
+.status-indicator.offline {
+  background-color: #f44336;
+}
+
+.user-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 5px;
+}
+
+.user-status.online {
+  background-color: #4caf50;
+  box-shadow: 0 0 3px #4caf50;
+}
+
+.user-status.offline {
+  background-color: #9e9e9e;
+}
+
+/* Toggle switch cho thông báo */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 17px;
+  margin-right: 5px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 17px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 13px;
+  width: 13px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #2196F3;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(13px);
+}
+
+/* Cải thiện hiển thị phiên chat */
+.session-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+
+.session-status {
+  font-size: 0.75rem;
+  color: #757575;
+}
+
+/* Badge cho thông báo tin nhắn mới */
+.session-item .badge {
+  background-color: #f44336;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+/* Cải thiện trạng thái phiên */
+.session-item.unassigned {
+  border-left: 3px solid #ff9800;
+}
+
+.session-item.assigned-to-me {
+  border-left: 3px solid #4caf50;
+}
+
+.session-item.assigned:not(.assigned-to-me) {
+  border-left: 3px solid #2196f3;
+}

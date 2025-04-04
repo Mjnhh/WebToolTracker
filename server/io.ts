@@ -44,6 +44,38 @@ function trackMessage(sessionId: string, messageId: string): boolean {
   return true; // Tin nhắn mới
 }
 
+// Mappping lưu trữ các phiên đang kết nối
+const connectedSessions = new Map<string, Set<string>>();
+
+// Lưu socket vào danh sách kết nối theo phiên
+function trackSocketInSession(sessionId: string, socketId: string) {
+  let sessionSockets = connectedSessions.get(sessionId);
+  
+  if (!sessionSockets) {
+    sessionSockets = new Set<string>();
+    connectedSessions.set(sessionId, sessionSockets);
+  }
+  
+  sessionSockets.add(socketId);
+  console.log(`Socket ${socketId} added to session ${sessionId}. Total: ${sessionSockets.size} sockets`);
+}
+
+// Xóa socket khỏi danh sách phiên khi ngắt kết nối
+function removeSocketFromSession(sessionId: string, socketId: string) {
+  const sessionSockets = connectedSessions.get(sessionId);
+  
+  if (sessionSockets) {
+    sessionSockets.delete(socketId);
+    console.log(`Socket ${socketId} removed from session ${sessionId}. Remaining: ${sessionSockets.size} sockets`);
+    
+    // Nếu không còn socket nào, xóa phiên khỏi danh sách
+    if (sessionSockets.size === 0) {
+      connectedSessions.delete(sessionId);
+      console.log(`Session ${sessionId} removed from tracking as it has no connected sockets`);
+    }
+  }
+}
+
 // Xử lý phản hồi tự động của bot
 async function handleBotResponse(sessionId: string, userMessage: string) {
   try {
@@ -93,13 +125,19 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
   (global as any).storageInstance = storage;
 
   io.on("connection", (socket: CustomSocket) => {
-    console.log("New client connected");
+    console.log(`New client connected: ${socket.id}`);
     let clientSessionId: string | null = null;
     let isStaff = false;
     
     // Xác định kiểu client (khách hàng hoặc nhân viên)
     const userType = socket.handshake.query.type;
     isStaff = userType === 'staff';
+    
+    // Lấy sessionId từ query params (nếu có)
+    if (socket.handshake.query.sessionId) {
+      clientSessionId = socket.handshake.query.sessionId as string;
+      console.log(`Client connected with session ID in query: ${clientSessionId}`);
+    }
     
     // Xác thực token nếu có
     const token = socket.handshake.auth.token;
@@ -113,21 +151,32 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
       }
     }
     
+    // Xử lý ping từ client để duy trì kết nối
+    socket.on('ping', (data) => {
+      console.log(`Received ping from client ${socket.id}, sending pong`);
+      socket.emit('pong', { timestamp: Date.now() });
+    });
+    
     // Đăng ký client vào danh sách kết nối
     socket.on('join-room', (roomId) => {
-      console.log(`Client joining room: ${roomId}`);
+      console.log(`Client ${socket.id} joining room: ${roomId}`);
       socket.join(roomId);
+      
+      // Nếu là một phiên chat, theo dõi socket cho phiên này
+      if (roomId !== 'support-staff' && !roomId.startsWith('chat:')) {
+        clientSessionId = roomId;
+        trackSocketInSession(clientSessionId, socket.id);
+      }
       
       if (roomId === 'support-staff') {
         console.log('Staff member joined support channel');
-      } else {
-        // Tham gia vào phiên hỗ trợ
-        socket.on('join-chat', (data) => {
-          if (data && data.sessionId) {
-            clientSessionId = data.sessionId;
-            console.log(`Client joined chat session: ${clientSessionId}`);
-          }
-        });
+      } else if (clientSessionId) {
+        // Thêm vào room chat:<sessionId> để nhận tin nhắn từ staff
+        const chatRoomId = `chat:${clientSessionId}`;
+        if (roomId !== chatRoomId) {
+          console.log(`Adding client to chat room: ${chatRoomId}`);
+          socket.join(chatRoomId);
+        }
       }
     });
     
@@ -146,10 +195,22 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
           metadata: null
         });
         
+        console.log(`Saved message with ID ${savedMessage.id}, ready to broadcast to session ${sessionId}`);
+        
         // Chỉ gửi tin nhắn qua socket nếu nó là tin nhắn mới
         if (trackMessage(sessionId, savedMessage.id.toString())) {
-          // Gửi lại tin nhắn cho tất cả mọi người trong phòng
+          console.log(`Broadcasting message to room ${sessionId} and chat:${sessionId}`);
+          
+          // Gửi tin nhắn đến cả hai room để đảm bảo mọi người nhận được
           io.to(sessionId).emit('new-message', savedMessage);
+          io.to(`chat:${sessionId}`).emit('new-message', savedMessage);
+          
+          // Debug: Kiểm tra số client trong mỗi room
+          const sessionRoom = io.sockets.adapter.rooms.get(sessionId);
+          const chatRoom = io.sockets.adapter.rooms.get(`chat:${sessionId}`);
+          
+          console.log(`Room ${sessionId} has ${sessionRoom ? sessionRoom.size : 0} clients`);
+          console.log(`Room chat:${sessionId} has ${chatRoom ? chatRoom.size : 0} clients`);
           
           // Kiểm tra trạng thái phiên và xử lý bot nếu cần
           handleBotResponse(sessionId, message);
@@ -163,12 +224,12 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
     
     // Xử lý ngắt kết nối
     socket.on('disconnect', (reason) => {
-      console.log('Client disconnected');
-      console.log(`Client disconnected: ${clientSessionId}, reason: ${reason}`);
+      console.log(`Client ${socket.id} disconnected, reason: ${reason}`);
       
       // Xử lý dọn dẹp tài nguyên nếu cần
       if (clientSessionId) {
-        socket.leave(clientSessionId);
+        removeSocketFromSession(clientSessionId, socket.id);
+        console.log(`Cleaned up socket ${socket.id} from session ${clientSessionId}`);
       }
       
       // Thông báo khi staff ngắt kết nối
@@ -179,6 +240,22 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
   });
 
   return io;
+}
+
+// Hàm tiện ích để broadcast tin nhắn tới một phiên
+export function broadcastMessageToSession(sessionId: string, message: any) {
+  if (!io) {
+    console.error('Socket.IO instance not available for broadcasting');
+    return false;
+  }
+  
+  console.log(`Broadcasting message to session ${sessionId}:`, message);
+  
+  // Gửi tới cả hai room để đảm bảo mọi người đều nhận được
+  io.to(sessionId).emit('new-message', message);
+  io.to(`chat:${sessionId}`).emit('new-message', message);
+  
+  return true;
 }
 
 // Lấy thể hiện của Socket.IO
