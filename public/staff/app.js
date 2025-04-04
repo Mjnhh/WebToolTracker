@@ -262,6 +262,13 @@ function setupTabNavigation() {
       const contentSection = document.getElementById(`${targetSection}-section`);
       if (contentSection) {
         contentSection.classList.add('active');
+        
+        // Nếu chuyển sang tab thống kê, tải dữ liệu thống kê
+        if (targetSection === 'stats') {
+          const statsFilter = document.getElementById('stats-period-filter');
+          const period = statsFilter ? statsFilter.value : 'today';
+          fetchStats(period);
+        }
       }
     });
   });
@@ -321,6 +328,43 @@ function setupSettings() {
       // Kiểm tra thiết lập ngay lập tức
       if (notificationSoundToggle.checked) {
         playNotificationSound('test');
+      }
+    });
+  }
+  
+  // Thiết lập loại âm thanh thông báo
+  const notificationSoundType = document.getElementById('notification-sound-type');
+  if (notificationSoundType) {
+    // Kiểm tra cài đặt đã lưu
+    const soundType = localStorage.getItem('notification-sound-type') || 'default';
+    notificationSoundType.value = soundType;
+    
+    // Thêm debounce để tránh gọi nhiều lần khi người dùng thay đổi nhanh
+    let soundTypeChangeTimeout;
+    
+    notificationSoundType.addEventListener('change', () => {
+      const selectedSoundType = notificationSoundType.value;
+      localStorage.setItem('notification-sound-type', selectedSoundType);
+      
+      // Sử dụng debounce để tránh phát nhiều âm thanh liên tiếp
+      clearTimeout(soundTypeChangeTimeout);
+      soundTypeChangeTimeout = setTimeout(() => {
+        // Phát âm thanh để kiểm tra
+        if (notificationSoundToggle && notificationSoundToggle.checked) {
+          playNotificationSound('test');
+        }
+      }, 300);
+    });
+  }
+  
+  // Nút nghe thử âm thanh
+  const testSoundBtn = document.getElementById('test-sound-btn');
+  if (testSoundBtn) {
+    testSoundBtn.addEventListener('click', () => {
+      if (notificationSoundToggle && notificationSoundToggle.checked) {
+        playNotificationSound('test');
+      } else {
+        showNotification('Bạn cần bật âm thanh thông báo trước', 'warning');
       }
     });
   }
@@ -522,24 +566,207 @@ function playNotificationSound(type) {
     return;
   }
   
-  let sound;
-  switch (type) {
-    case 'message':
-      sound = new Audio('/sounds/message.mp3');
-      break;
-    case 'new-session':
-      sound = new Audio('/sounds/new-session.mp3');
-      break;
-    case 'test':
-      sound = new Audio('/sounds/test-notification.mp3');
-      break;
-    default:
-      sound = new Audio('/sounds/notification.mp3');
-      break;
+  // Lấy loại âm thanh từ cài đặt
+  const selectedSoundType = localStorage.getItem('notification-sound-type') || 'default';
+  
+  let soundPath;
+  
+  // Tạo các dạng âm thanh khác nhau theo loại
+  const getAudioContext = () => {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    return new AudioContext();
+  };
+  
+  // Tạo âm thanh động nếu không tìm thấy file
+  const createDynamicSound = (frequency, duration, type = 'sine') => {
+    try {
+      const audioCtx = getAudioContext();
+      const oscillator = audioCtx.createOscillator();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+      
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + duration);
+      
+      return true;
+    } catch (error) {
+      console.error("Không thể tạo âm thanh động:", error);
+      return false;
+    }
+  };
+  
+  // Xác định đường dẫn âm thanh dựa trên loại và cài đặt
+  if (type === 'test') {
+    // Sử dụng âm thanh test để kiểm tra
+    switch (selectedSoundType) {
+      case 'beep':
+        // Tạo âm thanh beep (âm thanh vuông với tần số cao)
+        if (createDynamicSound(1000, 0.2, 'square')) {
+          return;
+        }
+        soundPath = '/sounds/beep/test-notification.mp3';
+        break;
+      case 'chime':
+        // Tạo âm thanh chime (âm thanh sin với tần số trung bình)
+        if (createDynamicSound(784, 0.5)) {
+          return;
+        }
+        soundPath = '/sounds/chime/test-notification.mp3';
+        break;
+      case 'ding':
+        // Tạo âm thanh ding (âm thanh sin với tần số cao)
+        if (createDynamicSound(1200, 0.3)) {
+          return;
+        }
+        soundPath = '/sounds/ding/test-notification.mp3';
+        break;
+      case 'custom':
+        soundPath = '/sounds/custom/test-notification.mp3';
+        break;
+      default:
+        // Âm thanh mặc định (âm thanh sin với tần số thay đổi)
+        if (createDynamicSound(659.25, 0.3)) {
+          return;
+        }
+        soundPath = '/sounds/test-notification.mp3';
+        break;
+    }
+  } else {
+    // Sử dụng âm thanh thông thường
+    switch (type) {
+      case 'message':
+        switch (selectedSoundType) {
+          case 'beep':
+            // Tạo âm thanh beep cho tin nhắn
+            if (createDynamicSound(900, 0.2, 'square')) {
+              return;
+            }
+            soundPath = '/sounds/beep/message.mp3';
+            break;
+          case 'chime':
+            // Tạo âm thanh chime cho tin nhắn
+            if (createDynamicSound(700, 0.4)) {
+              return;
+            }
+            soundPath = '/sounds/chime/message.mp3';
+            break;
+          case 'ding':
+            // Tạo âm thanh ding cho tin nhắn
+            if (createDynamicSound(1100, 0.2)) {
+              return;
+            }
+            soundPath = '/sounds/ding/message.mp3';
+            break;
+          case 'custom':
+            soundPath = '/sounds/custom/message.mp3';
+            break;
+          default:
+            soundPath = '/sounds/message.mp3';
+            break;
+        }
+        break;
+        
+      case 'new-session':
+        switch (selectedSoundType) {
+          case 'beep':
+            // Tạo âm thanh beep cho phiên mới (2 beep liên tiếp)
+            if (createDynamicSound(800, 0.4, 'square')) {
+              setTimeout(() => createDynamicSound(1000, 0.4, 'square'), 500);
+              return;
+            }
+            soundPath = '/sounds/beep/new-session.mp3';
+            break;
+          case 'chime':
+            // Tạo âm thanh chime cho phiên mới (2 note)
+            if (createDynamicSound(523.25, 0.3)) {
+              setTimeout(() => createDynamicSound(783.99, 0.3), 350);
+              return;
+            }
+            soundPath = '/sounds/chime/new-session.mp3';
+            break;
+          case 'ding':
+            // Tạo âm thanh ding cho phiên mới (2 ding)
+            if (createDynamicSound(1100, 0.2)) {
+              setTimeout(() => createDynamicSound(1300, 0.3), 300);
+              return;
+            }
+            soundPath = '/sounds/ding/new-session.mp3';
+            break;
+          case 'custom':
+            soundPath = '/sounds/custom/new-session.mp3';
+            break;
+          default:
+            soundPath = '/sounds/new-session.mp3';
+            break;
+        }
+        break;
+        
+      default:
+        switch (selectedSoundType) {
+          case 'beep':
+            // Tạo âm thanh beep cho thông báo
+            if (createDynamicSound(600, 0.1, 'square')) {
+              setTimeout(() => createDynamicSound(800, 0.1, 'square'), 200);
+              setTimeout(() => createDynamicSound(1000, 0.1, 'square'), 400);
+              return;
+            }
+            soundPath = '/sounds/beep/notification.mp3';
+            break;
+          case 'chime':
+            // Tạo âm thanh chime cho thông báo
+            if (createDynamicSound(440, 0.4)) {
+              setTimeout(() => createDynamicSound(880, 0.4), 450);
+              return;
+            }
+            soundPath = '/sounds/chime/notification.mp3';
+            break;
+          case 'ding':
+            // Tạo âm thanh ding cho thông báo
+            if (createDynamicSound(1000, 0.2)) {
+              setTimeout(() => createDynamicSound(1200, 0.3), 250);
+              return;
+            }
+            soundPath = '/sounds/ding/notification.mp3';
+            break;
+          case 'custom':
+            soundPath = '/sounds/custom/notification.mp3';
+            break;
+          default:
+            soundPath = '/sounds/notification.mp3';
+            break;
+        }
+        break;
+    }
   }
+  
+  console.log("Playing sound:", soundPath);
+  
+  // Phát âm thanh
+  const sound = new Audio(soundPath);
+  
+  sound.onerror = function() {
+    console.error('Không thể tải file âm thanh:', soundPath);
+    // Sử dụng âm thanh mặc định nếu không tìm thấy
+    const defaultSound = new Audio('/sounds/message.mp3');
+    defaultSound.play().catch(error => {
+      console.error('Không thể phát âm thanh mặc định:', error);
+      // Nếu không thể phát âm thanh mặc định, tạo âm thanh động
+      createDynamicSound(880, 0.3);
+    });
+  };
   
   sound.play().catch(error => {
     console.error('Không thể phát âm thanh thông báo:', error);
+    // Sử dụng âm thanh động nếu không thể phát âm thanh từ file
+    createDynamicSound(880, 0.3);
   });
 }
 
@@ -1337,6 +1564,37 @@ function updateSessionInfo(sessionId) {
   const sessionTime = formatTime(new Date(session.createdAt));
   const sessionTimeElement = document.getElementById('session-time');
   if (sessionTimeElement) sessionTimeElement.textContent = `Bắt đầu: ${sessionTime}`;
+  
+  // Hiển thị đánh giá nếu có
+  const ratingElement = document.getElementById('session-rating');
+  if (ratingElement) {
+    if (session.rating) {
+      // Hiển thị đánh giá bằng sao
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= session.rating) {
+          starsHtml += '<i class="fas fa-star"></i>';
+        } else {
+          starsHtml += '<i class="far fa-star"></i>';
+        }
+      }
+      ratingElement.innerHTML = `<div class="rating-stars">${starsHtml}</div>`;
+      ratingElement.style.display = 'block';
+    } else {
+      ratingElement.style.display = 'none';
+    }
+  }
+  
+  // Hiển thị phản hồi đánh giá nếu có
+  const feedbackElement = document.getElementById('session-feedback');
+  if (feedbackElement) {
+    if (session.feedback) {
+      feedbackElement.textContent = `Phản hồi: "${session.feedback}"`;
+      feedbackElement.style.display = 'block';
+    } else {
+      feedbackElement.style.display = 'none';
+    }
+  }
 }
 
 // Cập nhật danh sách phiên khi có tin nhắn mới
@@ -1464,4 +1722,505 @@ function sendAutoReply(sessionId) {
   .catch(error => {
     console.error('Error sending auto-reply message:', error);
   });
+}
+
+// Hàm lấy dữ liệu thống kê
+function fetchStats(period = 'today') {
+  // Hiển thị loading
+  const statsCards = document.querySelectorAll('.stat-value');
+  statsCards.forEach(card => {
+    card.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  });
+  
+  const chartContainer = document.querySelector('.chart-container');
+  if (chartContainer) {
+    chartContainer.innerHTML = '<div class="loading-chart">Đang tải dữ liệu...</div>';
+  }
+  
+  // Hiển thị loading cho phần góp ý
+  const recentRatingsContainer = document.getElementById('recent-ratings');
+  if (recentRatingsContainer) {
+    recentRatingsContainer.innerHTML = '<div class="loading-chart">Đang tải dữ liệu...</div>';
+  }
+  
+  // Gọi API
+  fetch('/api/support/stats?period=' + period, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    // Hiển thị dữ liệu lên giao diện
+    displayStats(data);
+    
+    // Vẽ biểu đồ
+    renderStatsChart(data.sessionsByDay);
+    
+    // Hiển thị dữ liệu góp ý đánh giá
+    displayRecentRatings(data.recentRatings || []);
+  })
+  .catch(error => {
+    console.error('Error fetching stats:', error);
+    showNotification('Không thể tải dữ liệu thống kê', 'error');
+    
+    // Hiển thị thông báo lỗi cho biểu đồ
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer) {
+      chartContainer.innerHTML = '<div class="error-message">Không thể tải dữ liệu biểu đồ</div>';
+    }
+    
+    // Hiển thị thông báo lỗi cho phần góp ý
+    const recentRatingsContainer = document.getElementById('recent-ratings');
+    if (recentRatingsContainer) {
+      recentRatingsContainer.innerHTML = '<div class="error-message">Không thể tải dữ liệu đánh giá</div>';
+    }
+  });
+}
+
+// Hiển thị dữ liệu thống kê
+function displayStats(data) {
+  // Cập nhật các giá trị thống kê
+  const statElements = {
+    'total-sessions': data.totalSessions,
+    'completed-sessions': data.completedSessions,
+    'avg-response-time': `${data.avgResponseTime} phút`,
+    'avg-rating': data.avgRating
+  };
+  
+  // Cập nhật từng phần tử
+  Object.keys(statElements).forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.textContent = statElements[id];
+    }
+  });
+  
+  // Hiển thị thông tin nhân viên nếu có
+  if (data.staffStats && data.staffStats.length > 0) {
+    const staffStatsContainer = document.getElementById('staff-stats-container');
+    if (staffStatsContainer) {
+      staffStatsContainer.innerHTML = '';
+      
+      // Tạo bảng thống kê nhân viên
+      const staffTable = document.createElement('table');
+      staffTable.className = 'staff-stats-table';
+      
+      // Tạo header
+      const tableHeader = document.createElement('thead');
+      tableHeader.innerHTML = `
+        <tr>
+          <th>Nhân viên</th>
+          <th>Phiên hỗ trợ</th>
+          <th>Hoàn thành</th>
+          <th>Thời gian TB</th>
+          <th>Đánh giá</th>
+        </tr>
+      `;
+      staffTable.appendChild(tableHeader);
+      
+      // Tạo body
+      const tableBody = document.createElement('tbody');
+      data.staffStats.forEach(staff => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${staff.name}</td>
+          <td>${staff.sessions}</td>
+          <td>${staff.completed}</td>
+          <td>${staff.avgResponseTime} phút</td>
+          <td>${staff.rating}/5</td>
+        `;
+        tableBody.appendChild(row);
+      });
+      staffTable.appendChild(tableBody);
+      
+      // Thêm bảng vào container
+      staffStatsContainer.appendChild(staffTable);
+    }
+  }
+}
+
+// Vẽ biểu đồ thống kê
+function renderStatsChart(data) {
+  // Lấy phần tử container
+  const chartContainer = document.querySelector('.chart-container');
+  if (!chartContainer) return;
+  
+  // Xóa nội dung cũ
+  chartContainer.innerHTML = '';
+  
+  // Tạo tiêu đề
+  const chartTitle = document.createElement('h3');
+  chartTitle.textContent = 'Số phiên hỗ trợ theo ngày';
+  chartContainer.appendChild(chartTitle);
+  
+  // Tính toán giá trị lớn nhất
+  const maxValue = Math.max(...data.map(item => item.count), 1);
+  
+  // Tạo canvas cho biểu đồ
+  const chartCanvas = document.createElement('div');
+  chartCanvas.className = 'chart-canvas';
+  
+  // Tạo các thanh biểu đồ
+  data.forEach(item => {
+    const percentage = (item.count / maxValue) * 100;
+    
+    const chartBar = document.createElement('div');
+    chartBar.className = 'chart-bar';
+    
+    chartBar.innerHTML = `
+      <div class="chart-bar-fill" style="height: ${percentage}%"></div>
+      <div class="chart-bar-value">${item.count}</div>
+      <div class="chart-bar-label">${item.date}</div>
+    `;
+    
+    chartCanvas.appendChild(chartBar);
+  });
+  
+  chartContainer.appendChild(chartCanvas);
+}
+
+// Thiết lập phần thống kê
+function setupStats() {
+  // Lấy bộ lọc thống kê
+  const statsFilter = document.getElementById('stats-period-filter');
+  if (statsFilter) {
+    // Thêm bộ lọc thời gian
+    statsFilter.addEventListener('change', () => {
+      fetchStats(statsFilter.value);
+    });
+  }
+  
+  // Thêm ID cho các phần tử thống kê
+  const statValueElements = document.querySelectorAll('#stats-section .stat-value');
+  const statTitles = ['total-sessions', 'completed-sessions', 'avg-response-time', 'avg-rating'];
+  
+  statValueElements.forEach((element, index) => {
+    if (index < statTitles.length) {
+      element.id = statTitles[index];
+    }
+  });
+  
+  // Thêm container cho thống kê nhân viên
+  const statsCharts = document.querySelector('.stats-charts');
+  if (statsCharts) {
+    const staffStatsContainer = document.createElement('div');
+    staffStatsContainer.id = 'staff-stats-container';
+    staffStatsContainer.className = 'staff-stats-container';
+    statsCharts.appendChild(staffStatsContainer);
+  }
+  
+  // Tải dữ liệu thống kê ban đầu
+  fetchStats('today');
+}
+
+// Hàm khởi tạo
+function init() {
+  // Kiểm tra token
+  const token = getToken();
+  if (!token) {
+    showLogin();
+  } else {
+    // Xác thực token
+    fetch('/api/auth/verify', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Token không hợp lệ');
+      }
+      return response.json();
+    })
+    .then(data => {
+      currentUser = data;
+      hideLogin();
+      
+      // Hiển thị tên nhân viên
+      document.getElementById('staff-name').textContent = data.name || data.username;
+      
+      // Thiết lập các tab
+      setupTabs();
+      
+      // Thiết lập cài đặt
+      setupSettings();
+      
+      // Thiết lập thống kê
+      setupStats();
+      
+      // Tải danh sách phiên hỗ trợ
+      fetchSupportSessions();
+
+      // Kết nối socket.io cho nhân viên
+      connectSocket();
+
+      // Thiết lập lọc phiên
+      document.getElementById('session-filter').addEventListener('change', filterSessions);
+    })
+    .catch(error => {
+      console.error('Lỗi xác thực:', error);
+      showLogin();
+    });
+  }
+}
+
+// Hàm lấy token xác thực
+function getToken() {
+  return localStorage.getItem('auth_token');
+}
+
+// Kết nối socket.io
+function connectSocket() {
+  if (socket) {
+    socket.disconnect();
+  }
+  
+  const token = getToken();
+  if (!token) return;
+  
+  socket = io({
+    query: { token }
+  });
+  
+  socket.on('connect', () => {
+    console.log('Staff socket connected successfully');
+    socket.emit('join-room', 'support-staff');
+  });
+  
+  socket.on('new-support-request', (session) => {
+    console.log('Received new support request:', session);
+    
+    // Phát âm thanh thông báo
+    playNotificationSound('new-session');
+    
+    // Hiển thị thông báo desktop
+    showDesktopNotification('Phiên chat mới', 'Có khách hàng mới cần hỗ trợ');
+    
+    // Thêm session mới vào danh sách
+    if (!sessionList.some(s => s.id === session.id)) {
+      sessionList.push(session);
+      updateSessionsList();
+      
+      // Kiểm tra và gửi tin nhắn tự động nếu đã bật
+      if (localStorage.getItem('auto-reply') === 'true') {
+        sendAutoReply(session.id);
+      }
+    }
+  });
+  
+  // Lắng nghe tin nhắn mới
+  socket.on('new-message', (message) => {
+    handleNewMessage(message);
+  });
+  
+  // Lắng nghe đánh giá mới
+  socket.on('new-rating', (data) => {
+    console.log('Nhận đánh giá mới:', data);
+    
+    // Phát âm thanh thông báo
+    playNotificationSound('notification');
+    
+    // Hiển thị thông báo desktop
+    showDesktopNotification(
+      'Đánh giá mới', 
+      `Phiên ${data.sessionId.substring(0, 8)} đã được đánh giá ${data.rating}/5 sao`
+    );
+    
+    // Hiển thị thông báo trong phiên chat hiện tại nếu đang mở
+    if (data.sessionId === currentSessionId) {
+      const ratingMessage = {
+        id: 'rating-' + Date.now(),
+        sessionId: data.sessionId,
+        sender: 'system',
+        content: `Khách hàng đã đánh giá phiên hỗ trợ: ${data.rating}/5 sao${data.feedback ? `. Góp ý: "${data.feedback}"` : ''}`,
+        timestamp: new Date().toISOString()
+      };
+      
+      appendMessage(ratingMessage);
+      scrollToBottom();
+    }
+    
+    // Cập nhật thẻ đánh giá trong danh sách phiên nếu có
+    updateSessionWithRating(data.sessionId, data.rating);
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
+  });
+}
+
+// Xử lý tin nhắn mới
+function handleNewMessage(message) {
+  console.log('Nhận tin nhắn mới qua socket:', message);
+  
+  // Thông báo khi có tin nhắn mới từ khách hàng
+  if (message.sender === 'user') {
+    // Phát âm thanh thông báo
+    playNotificationSound('message');
+    
+    // Hiển thị thông báo desktop nếu không phải là phiên đang mở
+    if (message.sessionId !== currentSessionId) {
+      showDesktopNotification('Tin nhắn mới', 'Có tin nhắn mới từ khách hàng');
+    }
+  }
+  
+  // Kiểm tra xem tin nhắn có thuộc phiên hiện tại và có ID hợp lệ không
+  if (!message || !message.id || !message.sessionId || message.sessionId !== currentSessionId) {
+    return;
+  }
+  
+  // 1. Kiểm tra xem tin nhắn này có phải là từ mình gửi đi không
+  const isSelfMessage = message.sender === 'staff';
+  
+  // 2. Tìm tin nhắn tạm thời tương ứng
+  const tempId = tempMessageMap.get(message.id);
+  if (tempId) {
+    console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
+    // Cập nhật ID
+    const tempElement = document.querySelector(`.message-item[data-temp-ref="${message.id}"]`);
+    if (tempElement) {
+      tempElement.dataset.messageId = message.id;
+      delete tempElement.dataset.tempRef;
+      
+      // Đánh dấu tin nhắn đã được xử lý
+      receivedMessageIds.add(message.id);
+      
+      // Xóa khỏi map tạm thời
+      tempMessageMap.delete(message.id);
+      return;
+    }
+  }
+  
+  // 3. Kiểm tra xem tin nhắn đã hiển thị chưa
+  if (receivedMessageIds.has(message.id)) {
+    console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
+    return;
+  }
+  
+  // 4. Nếu là tin nhắn do mình gửi (staff) và không tìm thấy bản tạm, kiểm tra lần cuối
+  if (isSelfMessage) {
+    // Tìm tất cả tin nhắn của staff trong DOM để tránh trường hợp trùng lặp
+    const existingStaffMessages = document.querySelectorAll('.message.staff.message-item');
+    for (let msgElem of existingStaffMessages) {
+      // Kiểm tra nội dung và thời gian để tránh hiển thị trùng lặp
+      const contentElem = msgElem.querySelector('.content');
+      if (contentElem && contentElem.textContent === message.content) {
+        console.log(`Phát hiện tin nhắn staff trùng nội dung, bỏ qua: "${message.content}"`);
+        receivedMessageIds.add(message.id);
+        return;
+      }
+    }
+  }
+  
+  // 5. Nếu là tin nhắn mới thật sự, thêm vào màn hình
+  receivedMessageIds.add(message.id);
+  appendMessage(message);
+  scrollToBottom();
+  
+  // Cập nhật danh sách phiên với tin nhắn mới
+  updateSessionWithNewMessage(message);
+}
+
+// Cập nhật phiên với đánh giá
+function updateSessionWithRating(sessionId, rating) {
+  // Tìm phiên trong danh sách
+  const sessionIndex = sessionList.findIndex(s => s.id === sessionId);
+  if (sessionIndex === -1) return;
+  
+  // Cập nhật đánh giá
+  sessionList[sessionIndex].rating = rating;
+  
+  // Cập nhật danh sách phiên
+  renderSessionList(sessionList);
+  
+  // Cập nhật chi tiết phiên nếu đang mở
+  if (currentSessionId === sessionId) {
+    updateSessionInfo(sessionId);
+  }
+}
+
+// Hiển thị góp ý đánh giá gần đây
+function displayRecentRatings(ratings) {
+  const recentRatingsContainer = document.getElementById('recent-ratings');
+  if (!recentRatingsContainer) return;
+  
+  if (!ratings || ratings.length === 0) {
+    recentRatingsContainer.innerHTML = '<div class="empty-ratings">Chưa có đánh giá nào trong khoảng thời gian này</div>';
+    return;
+  }
+  
+  // Tạo bảng đánh giá
+  const table = document.createElement('table');
+  table.className = 'recent-ratings-table';
+  
+  // Tạo header
+  const thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th>Thời gian</th>
+      <th>Mã phiên</th>
+      <th>Nhân viên</th>
+      <th>Đánh giá</th>
+      <th>Góp ý</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+  
+  // Tạo body
+  const tbody = document.createElement('tbody');
+  
+  ratings.forEach(rating => {
+    const row = document.createElement('tr');
+    
+    // Hiển thị thời gian định dạng đẹp
+    const date = new Date(rating.timestamp);
+    const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes() < 10 ? '0' : ''}${date.getMinutes()}`;
+    
+    // Tạo HTML cho stars
+    let starsHtml = '<div class="rating-stars-small">';
+    for (let i = 1; i <= 5; i++) {
+      if (i <= rating.rating) {
+        starsHtml += '<i class="fas fa-star"></i>';
+      } else {
+        starsHtml += '<i class="far fa-star"></i>';
+      }
+    }
+    starsHtml += '</div>';
+    
+    // Tạo nội dung hàng
+    row.innerHTML = `
+      <td>${formattedDate}</td>
+      <td>${rating.sessionId}</td>
+      <td>${rating.staffName || 'N/A'}</td>
+      <td><div class="rating-cell">${starsHtml} (${rating.rating}/5)</div></td>
+      <td class="rating-feedback">${rating.feedback || '-'}</td>
+    `;
+    
+    // Thêm sự kiện click để hiển thị phiên
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => {
+      selectSession(rating.sessionId);
+      
+      // Chuyển đến tab chat
+      const chatMenuItem = document.querySelector('.menu-item[data-section="chat"]');
+      if (chatMenuItem) {
+        chatMenuItem.click();
+      }
+    });
+    
+    tbody.appendChild(row);
+  });
+  
+  table.appendChild(tbody);
+  recentRatingsContainer.innerHTML = '';
+  recentRatingsContainer.appendChild(table);
 }

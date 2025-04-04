@@ -200,4 +200,93 @@
 
 #chatbot-root {
   animation: slideIn 0.3s ease;
+}
+
+/* Rating Form */
+.rating-container {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 10px 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 350px;
+  align-self: center;
+}
+
+.rating-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.rating-header h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.rating-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+  font-size: 28px;
+}
+
+.star {
+  color: #ddd;
+  margin: 0 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.star.hover, .star.selected {
+  color: #FFD700;
+  transform: scale(1.2);
+}
+
+.rating-label {
+  text-align: center;
+  color: #666;
+  margin-bottom: 15px;
+  font-size: 14px;
+  height: 20px;
+}
+
+.rating-feedback {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.rating-submit-btn {
+  padding: 8px 15px;
+  background: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.rating-submit-btn:hover:not(:disabled) {
+  background: #3a5ce5;
+}
+
+.rating-submit-btn:disabled {
+  background: #a0a0a0;
+  cursor: not-allowed;
 } 

@@ -72,6 +72,41 @@ router.post("/session/:sessionId/message", async (req: Request, res: Response) =
     // Log khi nhận được tin nhắn mới từ người dùng
     if (sender === "user") {
       console.log(`Received message from user in session ${sessionId}: ${message}`);
+      
+      // Ghi lại thời gian tin nhắn đầu tiên của khách hàng nếu chưa có
+      if (!sessionMetadata.firstCustomerMessageTime) {
+        sessionMetadata.firstCustomerMessageTime = new Date().toISOString();
+        
+        // Cập nhật metadata của phiên
+        await storage.updateChatSession(sessionId, {
+          metadata: JSON.stringify(sessionMetadata)
+        });
+        
+        console.log(`Recorded first customer message time for session ${sessionId}`);
+      }
+    } 
+    
+    // Ghi lại thời gian phản hồi đầu tiên của nhân viên
+    if (sender === "staff") {
+      // Chỉ ghi lại nếu đã có tin nhắn từ khách hàng và chưa có phản hồi
+      if (sessionMetadata.firstCustomerMessageTime && !sessionMetadata.firstResponseTime) {
+        sessionMetadata.firstResponseTime = new Date().toISOString();
+        
+        // Tính thời gian phản hồi (phút)
+        const responseTimeMs = new Date(sessionMetadata.firstResponseTime).getTime() - 
+                               new Date(sessionMetadata.firstCustomerMessageTime).getTime();
+        const responseTimeMinutes = (responseTimeMs / 1000 / 60).toFixed(2);
+        
+        // Lưu thêm thời gian phản hồi tính bằng phút
+        sessionMetadata.responseTime = parseFloat(responseTimeMinutes);
+        
+        // Cập nhật metadata của phiên
+        await storage.updateChatSession(sessionId, {
+          metadata: JSON.stringify(sessionMetadata)
+        });
+        
+        console.log(`Recorded first staff response time for session ${sessionId}: ${responseTimeMinutes} minutes`);
+      }
     }
 
     // Lưu tin nhắn người dùng hoặc nhân viên
@@ -181,6 +216,83 @@ router.get("/session/:sessionId/messages", async (req: Request, res: Response) =
   } catch (error) {
     console.error("Error getting chat messages:", error);
     res.status(500).json({ error: "Failed to get chat messages" });
+  }
+});
+
+// API để khách hàng gửi đánh giá phiên hỗ trợ
+router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const { rating, feedback } = req.body;
+
+    // Kiểm tra đầu vào
+    if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Đánh giá không hợp lệ. Vui lòng đánh giá từ 1-5 sao." });
+    }
+
+    // Kiểm tra phiên hỗ trợ
+    const session = await storage.getChatSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: "Phiên hỗ trợ không tồn tại" });
+    }
+
+    // Parse metadata
+    let sessionMetadata = {};
+    try {
+      sessionMetadata = session.metadata ? JSON.parse(session.metadata) : {};
+    } catch (e) {
+      console.error('Error parsing session metadata:', e);
+      return res.status(500).json({ error: "Lỗi xử lý dữ liệu phiên" });
+    }
+
+    // Chỉ cho phép đánh giá phiên đã kết thúc (có status = completed)
+    if (sessionMetadata.status !== 'completed') {
+      return res.status(400).json({ error: "Chỉ có thể đánh giá phiên hỗ trợ đã hoàn thành" });
+    }
+
+    // Cập nhật metadata với đánh giá
+    const updatedMetadata = {
+      ...sessionMetadata,
+      rating,
+      feedback: feedback || '',
+      ratedAt: new Date().toISOString()
+    };
+
+    // Lưu vào database
+    await storage.updateChatSession(sessionId, {
+      metadata: JSON.stringify(updatedMetadata)
+    });
+
+    // Thông báo cho nhân viên về đánh giá mới (nếu cần)
+    if (sessionMetadata.completedBy && getSocketServer()) {
+      getSocketServer().to('support-staff').emit('new-rating', {
+        sessionId,
+        rating,
+        feedback,
+        staffId: sessionMetadata.completedBy
+      });
+    }
+
+    // Ghi log
+    console.log(`Session ${sessionId} rated ${rating}/5 stars with feedback: "${feedback}"`);
+
+    // Thêm tin nhắn hệ thống về đánh giá
+    await storage.saveChatMessage({
+      sessionId,
+      content: `Khách hàng đã đánh giá phiên hỗ trợ với ${rating}/5 sao.`,
+      sender: 'system',
+      timestamp: new Date(),
+      metadata: null
+    });
+
+    // Trả về kết quả thành công
+    res.json({ 
+      success: true, 
+      message: "Cảm ơn bạn đã đánh giá phiên hỗ trợ!" 
+    });
+  } catch (error) {
+    console.error("Error rating support session:", error);
+    res.status(500).json({ error: "Lỗi khi lưu đánh giá" });
   }
 });
 

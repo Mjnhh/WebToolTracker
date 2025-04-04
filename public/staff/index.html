@@ -106,6 +106,23 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Chi tiết phiên chat -->
+                <div class="chat-detail">
+                    <div class="chat-header">
+                        <div class="client-info">
+                            <h3 id="client-name">Chọn phiên hỗ trợ</h3>
+                            <span id="session-time"></span>
+                            <div id="session-rating" class="session-rating" style="display: none;"></div>
+                            <div id="session-feedback" class="session-feedback" style="display: none;"></div>
+                        </div>
+                        <div class="header-actions">
+                            <button id="end-session-btn" class="action-button">
+                                <i class="fas fa-phone-slash"></i> Kết thúc phiên
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Phần thống kê -->
@@ -116,7 +133,7 @@
                         <p class="subtitle">Thông tin hiệu suất và thống kê phiên hỗ trợ</p>
                     </div>
                     <div class="header-actions">
-                        <select class="filter-select">
+                        <select class="filter-select" id="stats-period-filter">
                             <option value="today">Hôm nay</option>
                             <option value="week">Tuần này</option>
                             <option value="month">Tháng này</option>
@@ -131,36 +148,48 @@
                             <div class="stat-icon"><i class="fas fa-comments"></i></div>
                             <div class="stat-content">
                                 <h3>Tổng số phiên</h3>
-                                <p class="stat-value">0</p>
+                                <p class="stat-value" id="total-sessions">0</p>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                             <div class="stat-content">
                                 <h3>Hoàn thành</h3>
-                                <p class="stat-value">0</p>
+                                <p class="stat-value" id="completed-sessions">0</p>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-clock"></i></div>
                             <div class="stat-content">
                                 <h3>Thời gian trung bình</h3>
-                                <p class="stat-value">0 phút</p>
+                                <p class="stat-value" id="avg-response-time">0 phút</p>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-star"></i></div>
                             <div class="stat-content">
                                 <h3>Đánh giá</h3>
-                                <p class="stat-value">0/5</p>
+                                <p class="stat-value" id="avg-rating">0/5</p>
                             </div>
                         </div>
                     </div>
                     
                     <div class="stats-charts">
                         <div class="chart-container">
-                            <h3>Biểu đồ sẽ hiển thị ở đây</h3>
-                            <p>Tính năng đang phát triển</p>
+                            <h3>Biểu đồ số phiên theo ngày</h3>
+                            <div class="loading-chart">Đang tải dữ liệu...</div>
+                        </div>
+                        
+                        <!-- Thêm phần góp ý đánh giá gần đây -->
+                        <div class="recent-ratings-container">
+                            <h3>Góp ý & Đánh giá gần đây</h3>
+                            <div id="recent-ratings">
+                                <div class="loading-chart">Đang tải dữ liệu...</div>
+                            </div>
+                        </div>
+                        
+                        <div id="staff-stats-container" class="staff-stats-container">
+                            <!-- Bảng thống kê nhân viên sẽ được thêm vào đây bằng JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -267,6 +296,23 @@
                                 <span>Âm thanh thông báo</span>
                                 <input type="checkbox" id="notification-sound" checked>
                             </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <span>Loại âm thanh thông báo</span>
+                                <select id="notification-sound-type">
+                                    <option value="default">Mặc định</option>
+                                    <option value="beep">Beep</option>
+                                    <option value="chime">Chuông</option>
+                                    <option value="ding">Ding</option>
+                                    <option value="custom">Tùy chỉnh</option>
+                                </select>
+                            </label>
+                            <div style="margin-top: 8px; text-align: center;">
+                                <button id="test-sound-btn" class="btn-small">
+                                    <i class="fas fa-play"></i> Nghe thử
+                                </button>
+                            </div>
                         </div>
                         <div class="setting-item">
                             <label>

@@ -10,6 +10,7 @@ class Chatbot {
     this.isInitialized = false;
     this.lastSentMessage = null;
     this.lastSentTimestamp = null;
+    this.messages = []; // Mảng lưu trữ các tin nhắn
     
     // Khởi tạo giao diện
     this.initializeUI();
@@ -70,33 +71,33 @@ class Chatbot {
   }
   
   async createNewSession() {
-    const response = await fetch('/api/chat/session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        metadata: JSON.stringify({
-          userAgent: navigator.userAgent,
-          language: navigator.language,
-          timestamp: new Date().toISOString()
+      const response = await fetch('/api/chat/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          metadata: JSON.stringify({
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            timestamp: new Date().toISOString()
+          })
         })
-      })
-    });
-    
-    if (!response.ok) {
+      });
+      
+      if (!response.ok) {
       throw new Error('Failed to initialize chat session');
-    }
-    
-    const session = await response.json();
-    this.sessionId = session.id;
-    
+      }
+      
+      const session = await response.json();
+      this.sessionId = session.id;
+      
     // Lưu sessionId vào localStorage
     localStorage.setItem('chatbot_session_id', this.sessionId);
-    
+      
     // Load tin nhắn và hiển thị thông báo chào mừng
     await this.loadMessages();
-    this.addMessage('Xin chào! Tôi là trợ lý ảo của Coding Team. Tôi có thể giúp gì cho bạn?', 'bot');
+      this.addMessage('Xin chào! Tôi là trợ lý ảo của Coding Team. Tôi có thể giúp gì cho bạn?', 'bot');
   }
   
   async loadMessages() {
@@ -296,42 +297,53 @@ class Chatbot {
   
   initializeWebSocket() {
     try {
-      console.log('Initializing WebSocket connection with sessionId:', this.sessionId);
+      if (!this.sessionId) {
+        console.error('Cannot initialize WebSocket: No session ID');
+        return;
+      }
       
-      // Khởi tạo kết nối Socket.IO với timeout
+      if (this.socket && this.socket.connected) {
+        console.log('WebSocket already connected');
+        return;
+      }
+      
+      console.log('Initializing WebSocket connection...');
       this.socket = io({
         query: {
           sessionId: this.sessionId
-        },
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
+        }
       });
       
-      // Xử lý các sự kiện Socket.IO
       this.socket.on('connect', () => {
         console.log('WebSocket connected successfully');
-        this.addSystemMessage('Đã kết nối với server.');
+        this.socket.emit('join-room', this.sessionId);
       });
       
-      this.socket.on('connect_error', (error) => {
-        console.error('WebSocket connection error:', error);
-        this.addSystemMessage('Không thể kết nối với server. Đang chuyển sang HTTP fallback...');
-      });
-      
-      this.socket.on('disconnect', () => {
-        console.log('WebSocket disconnected');
-        this.addSystemMessage('Mất kết nối với server. Đang thử kết nối lại...');
-      });
-      
+      // Xử lý tin nhắn từ bot
       this.socket.on('bot_message', (data) => {
         console.log('Received bot message:', data);
-        // Kiểm tra nội dung tin nhắn trước khi hiển thị
         if (data.content && data.content.trim() !== '') {
           this.addMessage(data.content, 'bot');
         }
+        
         if (data.requiresHumanSupport) {
           this.addSystemMessage('Đang kết nối với nhân viên hỗ trợ...');
+        }
+      });
+      
+      this.socket.on('new-message', (message) => {
+        if (!message || !message.content) return;
+        
+        // Kiểm tra nếu tin nhắn đã được hiển thị (tránh trùng lặp với bot_message)
+        if (message.sender === 'bot') {
+          return; // Bỏ qua vì đã xử lý qua bot_message
+        }
+        
+        if (message.sender === 'staff') {
+          this.isWithHuman = true;
+          this.addMessage(message.content, 'staff');
+        } else if (message.sender === 'system') {
+          this.addSystemMessage(message.content);
         }
       });
       
@@ -339,20 +351,7 @@ class Chatbot {
         console.log('Support staff joined:', data);
         this.isWithHuman = true;
         this.updateUIForHumanSupport();
-        this.addSystemMessage(`Nhân viên ${data.staffName} đã tham gia phiên hỗ trợ.`);
-      });
-      
-      this.socket.on('new-message', (message) => {
-        console.log('Received new message:', message);
-        // Kiểm tra nội dung tin nhắn trước khi hiển thị
-        if (message.content && message.content.trim() !== '') {
-          this.addMessage(message.content, message.sender);
-        }
-      });
-      
-      this.socket.on('support_status', (data) => {
-        console.log('Support status update:', data);
-        this.addSystemMessage(data.message);
+        this.addSystemMessage('Nhân viên hỗ trợ đã tham gia cuộc trò chuyện.');
       });
       
       this.socket.on('support-ended', (data) => {
@@ -360,6 +359,18 @@ class Chatbot {
         this.isWithHuman = false;
         this.updateUIForBotSupport();
         this.addSystemMessage('Phiên hỗ trợ đã kết thúc.');
+        
+        // Hiển thị form đánh giá nếu cần
+        if (data && data.shouldRate) {
+          this.showRatingForm();
+        }
+      });
+      
+      this.socket.on('support_status', (data) => {
+        console.log('Support status update:', data);
+        if (data.message) {
+          this.addSystemMessage(data.message);
+        }
       });
       
       this.socket.on('staff-typing-status', (isTyping) => {
@@ -464,16 +475,16 @@ class Chatbot {
         
         // Fallback to HTTP if WebSocket is not available
         const response = await fetch(`/api/chat/session/${this.sessionId}/message`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
             message,
             sender: 'user'
-          })
-        });
-        
+        })
+      });
+      
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
           throw new Error(errorData?.message || 'Không thể gửi tin nhắn');
@@ -508,6 +519,142 @@ class Chatbot {
       if (!this.socket?.connected) {
         this.initializeWebSocket();
       }
+    }
+  }
+  
+  // Hiển thị form đánh giá
+  showRatingForm() {
+    // Tạo container cho form đánh giá
+    const ratingContainer = document.createElement('div');
+    ratingContainer.className = 'rating-container';
+    
+    // HTML cho form đánh giá
+    ratingContainer.innerHTML = `
+      <div class="rating-header">
+        <h4>Đánh giá phiên hỗ trợ</h4>
+        <p>Vui lòng đánh giá trải nghiệm hỗ trợ của bạn</p>
+      </div>
+      <div class="rating-stars">
+        <span class="star" data-rating="1">★</span>
+        <span class="star" data-rating="2">★</span>
+        <span class="star" data-rating="3">★</span>
+        <span class="star" data-rating="4">★</span>
+        <span class="star" data-rating="5">★</span>
+      </div>
+      <div class="rating-label">Chọn số sao</div>
+      <textarea class="rating-feedback" placeholder="Góp ý thêm (không bắt buộc)..."></textarea>
+      <button class="rating-submit-btn" disabled>Gửi đánh giá</button>
+    `;
+    
+    // Thêm vào chat container
+    this.messagesContainer.appendChild(ratingContainer);
+    
+    // Scroll xuống để hiển thị form đánh giá
+    this.scrollToBottom();
+    
+    // Biến lưu rating được chọn
+    let selectedRating = 0;
+    
+    // Xử lý sự kiện cho các ngôi sao
+    const stars = ratingContainer.querySelectorAll('.star');
+    const ratingLabel = ratingContainer.querySelector('.rating-label');
+    const submitButton = ratingContainer.querySelector('.rating-submit-btn');
+    
+    // Labels cho các mức đánh giá
+    const ratingLabels = [
+      'Chọn số sao',
+      'Không hài lòng',
+      'Tạm được',
+      'Bình thường',
+      'Hài lòng',
+      'Rất hài lòng'
+    ];
+    
+    stars.forEach(star => {
+      // Hover effect
+      star.addEventListener('mouseover', () => {
+        const rating = parseInt(star.getAttribute('data-rating'));
+        this.updateStars(stars, rating, 'highlight');
+        ratingLabel.textContent = ratingLabels[rating];
+      });
+      
+      // Mouseout effect
+      star.addEventListener('mouseout', () => {
+        this.updateStars(stars, selectedRating, 'highlight'); 
+        ratingLabel.textContent = selectedRating > 0 ? ratingLabels[selectedRating] : ratingLabels[0];
+      });
+      
+      // Click to select rating
+      star.addEventListener('click', () => {
+        selectedRating = parseInt(star.getAttribute('data-rating'));
+        this.updateStars(stars, selectedRating, 'selected');
+        ratingLabel.textContent = ratingLabels[selectedRating];
+        submitButton.disabled = false;
+      });
+    });
+    
+    // Xử lý khi submit đánh giá
+    submitButton.addEventListener('click', () => {
+      if (selectedRating > 0) {
+        const feedback = ratingContainer.querySelector('.rating-feedback').value;
+        this.submitRating(selectedRating, feedback);
+        ratingContainer.remove();
+      }
+    });
+  }
+  
+  // Cập nhật hiển thị sao đánh giá
+  updateStars(stars, rating, action) {
+    stars.forEach(star => {
+      const starRating = parseInt(star.getAttribute('data-rating'));
+      
+      if (action === 'highlight') {
+        if (starRating <= rating) {
+          star.classList.add('hover');
+        } else {
+          star.classList.remove('hover');
+        }
+      } else if (action === 'selected') {
+        if (starRating <= rating) {
+          star.classList.add('selected');
+        } else {
+          star.classList.remove('selected');
+        }
+      }
+    });
+  }
+  
+  // Gửi đánh giá lên server
+  async submitRating(rating, feedback = '') {
+    try {
+      // Hiển thị thông báo đang gửi
+      this.addSystemMessage('Đang gửi đánh giá...');
+      
+      // Gọi API để lưu đánh giá
+      const response = await fetch(`/api/chat/session/${this.sessionId}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rating,
+          feedback
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể gửi đánh giá');
+      }
+      
+      const data = await response.json();
+      
+      // Hiển thị thông báo thành công
+      this.addSystemMessage('Cảm ơn bạn đã đánh giá! Phản hồi của bạn giúp chúng tôi cải thiện dịch vụ.');
+      
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      this.addSystemMessage('Không thể gửi đánh giá: ' + (error.message || 'Lỗi không xác định'));
     }
   }
 }

@@ -65,6 +65,6 @@ export async function registerRoutes(app: Express) {
     res.sendFile(path.join(process.cwd(), 'public/coding-team-website.html'));
   });
   console.log("Registered fallback route");
-  
+
   return server;
 }

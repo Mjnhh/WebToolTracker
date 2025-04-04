@@ -263,6 +263,335 @@ function createTestSound() {
   }
 }
 
+// Hàm tạo âm thanh tin nhắn kiểu beep
+function createBeepMessageSound(play = false, download = false) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    
+    // Tạo oscillator
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime); // Tần số cao hơn cho beep
+    
+    // Tạo gain node để điều chỉnh âm lượng
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime + 0.1);
+    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+    
+    // Kết nối và bắt đầu
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (play) {
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.2);
+      return;
+    }
+    
+    if (download) {
+      // Xuất ra file audio
+      const length = 0.2;
+      const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
+      
+      const offlineOscillator = offlineCtx.createOscillator();
+      offlineOscillator.type = 'square';
+      offlineOscillator.frequency.setValueAtTime(1000, offlineCtx.currentTime);
+      
+      const offlineGain = offlineCtx.createGain();
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.01);
+      offlineGain.gain.setValueAtTime(0.2, offlineCtx.currentTime + 0.1);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.2);
+      
+      offlineOscillator.connect(offlineGain);
+      offlineGain.connect(offlineCtx.destination);
+      
+      offlineOscillator.start();
+      offlineOscillator.stop(offlineCtx.currentTime + 0.2);
+      
+      offlineCtx.startRendering().then(buffer => {
+        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'beep-message.mp3';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Audio Context not supported or error generating sound', error);
+  }
+}
+
+// Hàm tạo âm thanh phiên mới kiểu beep
+function createBeepNewSessionSound(play = false, download = false) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    
+    // Tạo oscillator
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    
+    // Tạo gain node để điều chỉnh âm lượng
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    
+    // Kết nối và bắt đầu
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (play) {
+      // Beep ngắn 3 lần
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+      
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+      
+      oscillator.start();
+      
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime + 0.2);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.21);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime + 0.4);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.41);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      
+      oscillator.stop(audioCtx.currentTime + 0.6);
+      return;
+    }
+    
+    if (download) {
+      // Xuất ra file audio
+      const length = 0.6;
+      const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
+      
+      const offlineOscillator = offlineCtx.createOscillator();
+      offlineOscillator.type = 'square';
+      offlineOscillator.frequency.setValueAtTime(800, offlineCtx.currentTime);
+      
+      const offlineGain = offlineCtx.createGain();
+      
+      // Beep ngắn 3 lần
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.01);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.1);
+      
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime + 0.2);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.21);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.3);
+      
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime + 0.4);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.41);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.5);
+      
+      offlineOscillator.connect(offlineGain);
+      offlineGain.connect(offlineCtx.destination);
+      
+      offlineOscillator.start();
+      offlineOscillator.stop(offlineCtx.currentTime + 0.6);
+      
+      offlineCtx.startRendering().then(buffer => {
+        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'beep-new-session.mp3';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Audio Context not supported or error generating sound', error);
+  }
+}
+
+// Hàm tạo âm thanh thông báo kiểu beep
+function createBeepNotificationSound(play = false, download = false) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    
+    // Tạo oscillator
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    
+    // Tạo gain node để điều chỉnh âm lượng
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    
+    // Kết nối và bắt đầu
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (play) {
+      // Beep tăng dần tần số
+      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+      
+      oscillator.start();
+      oscillator.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      
+      oscillator.stop(audioCtx.currentTime + 0.4);
+      return;
+    }
+    
+    if (download) {
+      // Xuất ra file audio
+      const length = 0.4;
+      const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
+      
+      const offlineOscillator = offlineCtx.createOscillator();
+      offlineOscillator.type = 'square';
+      offlineOscillator.frequency.setValueAtTime(600, offlineCtx.currentTime);
+      offlineOscillator.frequency.linearRampToValueAtTime(1200, offlineCtx.currentTime + 0.3);
+      
+      const offlineGain = offlineCtx.createGain();
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.01);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.3);
+      
+      offlineOscillator.connect(offlineGain);
+      offlineGain.connect(offlineCtx.destination);
+      
+      offlineOscillator.start();
+      offlineOscillator.stop(offlineCtx.currentTime + 0.4);
+      
+      offlineCtx.startRendering().then(buffer => {
+        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'beep-notification.mp3';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Audio Context not supported or error generating sound', error);
+  }
+}
+
+// Hàm tạo âm thanh kiểm tra kiểu beep
+function createBeepTestSound(play = false, download = false) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    
+    // Tạo oscillator
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    
+    // Tạo gain node để điều chỉnh âm lượng
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    
+    // Kết nối và bắt đầu
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (play) {
+      // Tạo âm thanh kiểu beep
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+      
+      oscillator.start();
+      
+      oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.2);
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime + 0.2);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.21);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      
+      oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.4);
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime + 0.4);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.41);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      
+      oscillator.stop(audioCtx.currentTime + 0.6);
+      return;
+    }
+    
+    if (download) {
+      // Xuất ra file audio
+      const length = 0.6;
+      const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
+      
+      const offlineOscillator = offlineCtx.createOscillator();
+      offlineOscillator.type = 'square';
+      
+      const offlineGain = offlineCtx.createGain();
+      
+      // Tạo âm thanh kiểu beep
+      offlineOscillator.frequency.setValueAtTime(800, offlineCtx.currentTime);
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.01);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.1);
+      
+      offlineOscillator.frequency.setValueAtTime(1000, offlineCtx.currentTime + 0.2);
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime + 0.2);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.21);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.3);
+      
+      offlineOscillator.frequency.setValueAtTime(1200, offlineCtx.currentTime + 0.4);
+      offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime + 0.4);
+      offlineGain.gain.linearRampToValueAtTime(0.2, offlineCtx.currentTime + 0.41);
+      offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.5);
+      
+      offlineOscillator.connect(offlineGain);
+      offlineGain.connect(offlineCtx.destination);
+      
+      offlineOscillator.start();
+      offlineOscillator.stop(offlineCtx.currentTime + 0.6);
+      
+      offlineCtx.startRendering().then(buffer => {
+        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'beep-test.mp3';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Audio Context not supported or error generating sound', error);
+  }
+}
+
 // Hàm chuyển đổi AudioBuffer thành WAV
 function bufferToWave(abuffer, len) {
   const numOfChan = abuffer.numberOfChannels;

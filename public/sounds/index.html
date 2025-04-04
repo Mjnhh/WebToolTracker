@@ -69,17 +69,46 @@
         button.download:hover {
             background-color: #e68a00;
         }
+        button.download-all {
+            background-color: #9c27b0;
+            margin-top: 30px;
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            font-size: 18px;
+        }
+        button.download-all:hover {
+            background-color: #7b1fa2;
+        }
         .description {
             font-size: 14px;
             color: #666;
             margin-bottom: 15px;
+        }
+        h2 {
+            text-align: center;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .sound-theme {
+            margin-bottom: 40px;
+        }
+        .center {
+            display: flex;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
     <h1>Notification Sound Generator</h1>
     
-    <div class="container">
+    <div class="center">
+        <button class="download-all" onclick="createAllSoundsForAllThemes()">Tạo tất cả các âm thanh</button>
+    </div>
+    
+    <h2>Âm thanh mặc định</h2>
+    <div class="container sound-theme">
         <div class="sound-card">
             <h3>Message Sound</h3>
             <div class="description">A short high-pitched beep sound for new messages.</div>
@@ -117,382 +146,248 @@
         </div>
     </div>
     
+    <h2>Âm thanh Beep</h2>
+    <div class="container sound-theme">
+        <div class="sound-card">
+            <h3>Beep Message Sound</h3>
+            <div class="description">A short beep sound for message notifications.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playBeepMessageSound()">Play</button>
+                <button class="download" onclick="downloadBeepMessageSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Beep New Session Sound</h3>
+            <div class="description">Multiple beeps for new chat sessions.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playBeepNewSessionSound()">Play</button>
+                <button class="download" onclick="downloadBeepNewSessionSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Beep Notification Sound</h3>
+            <div class="description">General beep notification sound.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playBeepNotificationSound()">Play</button>
+                <button class="download" onclick="downloadBeepNotificationSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Beep Test Sound</h3>
+            <div class="description">Multiple beeps for testing audio.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playBeepTestSound()">Play</button>
+                <button class="download" onclick="downloadBeepTestSound()">Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <h2>Âm thanh Chime</h2>
+    <div class="container sound-theme">
+        <div class="sound-card">
+            <h3>Chime Message Sound</h3>
+            <div class="description">A soft chime sound for message notifications.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playChimeMessageSound()">Play</button>
+                <button class="download" onclick="downloadChimeMessageSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Chime New Session Sound</h3>
+            <div class="description">Nice chime for new chat sessions.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playChimeNewSessionSound()">Play</button>
+                <button class="download" onclick="downloadChimeNewSessionSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Chime Notification Sound</h3>
+            <div class="description">General chime notification sound.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playChimeNotificationSound()">Play</button>
+                <button class="download" onclick="downloadChimeNotificationSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Chime Test Sound</h3>
+            <div class="description">Chime sequence for testing audio.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playChimeTestSound()">Play</button>
+                <button class="download" onclick="downloadChimeTestSound()">Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <h2>Âm thanh Ding</h2>
+    <div class="container sound-theme">
+        <div class="sound-card">
+            <h3>Ding Message Sound</h3>
+            <div class="description">A sharp ding sound for message notifications.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playDingMessageSound()">Play</button>
+                <button class="download" onclick="downloadDingMessageSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Ding New Session Sound</h3>
+            <div class="description">Multiple dings for new chat sessions.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playDingNewSessionSound()">Play</button>
+                <button class="download" onclick="downloadDingNewSessionSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Ding Notification Sound</h3>
+            <div class="description">General ding notification sound.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playDingNotificationSound()">Play</button>
+                <button class="download" onclick="downloadDingNotificationSound()">Download</button>
+            </div>
+        </div>
+        
+        <div class="sound-card">
+            <h3>Ding Test Sound</h3>
+            <div class="description">A sequence of dings for testing audio.</div>
+            <div class="btn-group">
+                <button class="play" onclick="playDingTestSound()">Play</button>
+                <button class="download" onclick="downloadDingTestSound()">Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="create-sounds.js"></script>
     <script>
-        // Hàm chuyển đổi AudioBuffer thành WAV
-        function bufferToWave(abuffer, len) {
-            const numOfChan = abuffer.numberOfChannels;
-            const length = len * numOfChan * 2 + 44;
-            const buffer = new ArrayBuffer(length);
-            const view = new DataView(buffer);
-            const channels = [];
-            let i;
-            let sample;
-            let offset = 0;
-            let pos = 0;
-            
-            // Viết WAVE header
-            setUint32(0x46464952);                         // "RIFF"
-            setUint32(length - 8);                         // file length - 8
-            setUint32(0x45564157);                         // "WAVE"
-            
-            setUint32(0x20746d66);                         // "fmt " chunk
-            setUint32(16);                                 // length = 16
-            setUint16(1);                                  // PCM (uncompressed)
-            setUint16(numOfChan);
-            setUint32(abuffer.sampleRate);
-            setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-            setUint16(numOfChan * 2);                      // block-align
-            setUint16(16);                                 // 16-bit
-            
-            setUint32(0x61746164);                         // "data" - chunk
-            setUint32(length - pos - 4);                   // chunk length
-            
-            // Lưu trữ giá trị mẫu
-            for (i = 0; i < abuffer.numberOfChannels; i++) {
-                channels.push(abuffer.getChannelData(i));
-            }
-            
-            while (pos < length) {
-                for (i = 0; i < numOfChan; i++) {
-                    // Interleave channels
-                    sample = Math.max(-1, Math.min(1, channels[i][offset])); // Clamp
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0; // Scale to 16-bit signed int
-                    view.setInt16(pos, sample, true);  // Write 16-bit sample
-                    pos += 2;
-                }
-                offset++; // Next source sample
-            }
-            
-            return new Blob([buffer], { type: 'audio/wav' });
-            
-            function setUint16(data) {
-                view.setUint16(pos, data, true);
-                pos += 2;
-            }
-            
-            function setUint32(data) {
-                view.setUint32(pos, data, true);
-                pos += 4;
-            }
-        }
-
-        // Hàm tạo âm thanh tin nhắn
-        function createMessageSound(play = false, download = false) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const audioCtx = new AudioContext();
-                
-                // Tạo oscillator
-                const oscillator = audioCtx.createOscillator();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-                
-                // Tạo gain node để điều chỉnh âm lượng
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
-                
-                // Kết nối và bắt đầu
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                if (play) {
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.3);
-                    return;
-                }
-                
-                // Xuất ra file audio khi download
-                if (download) {
-                    const length = 0.3;
-                    const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
-                    
-                    const offlineOscillator = offlineCtx.createOscillator();
-                    offlineOscillator.type = 'sine';
-                    offlineOscillator.frequency.setValueAtTime(880, offlineCtx.currentTime);
-                    
-                    const offlineGain = offlineCtx.createGain();
-                    offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
-                    offlineGain.gain.linearRampToValueAtTime(0.3, offlineCtx.currentTime + 0.01);
-                    offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.3);
-                    
-                    offlineOscillator.connect(offlineGain);
-                    offlineGain.connect(offlineCtx.destination);
-                    
-                    offlineOscillator.start();
-                    offlineOscillator.stop(offlineCtx.currentTime + 0.3);
-                    
-                    offlineCtx.startRendering().then(buffer => {
-                        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = 'message.mp3';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
-                        }, 100);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Audio Context not supported or error generating sound', error);
-            }
-        }
-
-        // Hàm tạo âm thanh phiên mới
-        function createNewSessionSound(play = false, download = false) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const audioCtx = new AudioContext();
-                
-                // Tạo oscillator
-                const oscillator = audioCtx.createOscillator();
-                oscillator.type = 'sine';
-                
-                // Tạo gain node để điều chỉnh âm lượng
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
-                
-                // Kết nối và bắt đầu
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                // Tạo âm thanh 2 nốt
-                oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-                
-                if (play) {
-                    oscillator.start();
-                    oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.25); // G5
-                    oscillator.stop(audioCtx.currentTime + 0.5);
-                    return;
-                }
-                
-                // Xuất ra file audio khi download
-                if (download) {
-                    const length = 0.5;
-                    const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
-                    
-                    const offlineOscillator = offlineCtx.createOscillator();
-                    offlineOscillator.type = 'sine';
-                    
-                    const offlineGain = offlineCtx.createGain();
-                    offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
-                    offlineGain.gain.linearRampToValueAtTime(0.3, offlineCtx.currentTime + 0.01);
-                    offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.5);
-                    
-                    offlineOscillator.connect(offlineGain);
-                    offlineGain.connect(offlineCtx.destination);
-                    
-                    offlineOscillator.frequency.setValueAtTime(523.25, offlineCtx.currentTime); // C5
-                    offlineOscillator.start();
-                    offlineOscillator.frequency.setValueAtTime(783.99, offlineCtx.currentTime + 0.25); // G5
-                    offlineOscillator.stop(offlineCtx.currentTime + 0.5);
-                    
-                    offlineCtx.startRendering().then(buffer => {
-                        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = 'new-session.mp3';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
-                        }, 100);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Audio Context not supported or error generating sound', error);
-            }
-        }
-
-        // Hàm tạo âm thanh thông báo chung
-        function createNotificationSound(play = false, download = false) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const audioCtx = new AudioContext();
-                
-                // Tạo oscillator
-                const oscillator = audioCtx.createOscillator();
-                oscillator.type = 'sine';
-                
-                // Tạo gain node để điều chỉnh âm lượng
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                
-                // Kết nối và bắt đầu
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                // Tạo âm thanh với tần số thay đổi
-                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
-                
-                if (play) {
-                    oscillator.start();
-                    oscillator.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 0.2); // A5
-                    oscillator.stop(audioCtx.currentTime + 0.4);
-                    return;
-                }
-                
-                // Xuất ra file audio khi download
-                if (download) {
-                    const length = 0.4;
-                    const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
-                    
-                    const offlineOscillator = offlineCtx.createOscillator();
-                    offlineOscillator.type = 'sine';
-                    
-                    const offlineGain = offlineCtx.createGain();
-                    offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
-                    offlineGain.gain.linearRampToValueAtTime(0.3, offlineCtx.currentTime + 0.01);
-                    offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.4);
-                    
-                    offlineOscillator.connect(offlineGain);
-                    offlineGain.connect(offlineCtx.destination);
-                    
-                    offlineOscillator.frequency.setValueAtTime(440, offlineCtx.currentTime); // A4
-                    offlineOscillator.start();
-                    offlineOscillator.frequency.linearRampToValueAtTime(880, offlineCtx.currentTime + 0.2); // A5
-                    offlineOscillator.stop(offlineCtx.currentTime + 0.4);
-                    
-                    offlineCtx.startRendering().then(buffer => {
-                        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = 'notification.mp3';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
-                        }, 100);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Audio Context not supported or error generating sound', error);
-            }
-        }
-
-        // Hàm tạo âm thanh kiểm tra
-        function createTestSound(play = false, download = false) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const audioCtx = new AudioContext();
-                
-                // Tạo oscillator
-                const oscillator = audioCtx.createOscillator();
-                oscillator.type = 'sine';
-                
-                // Tạo gain node để điều chỉnh âm lượng
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
-                
-                // Kết nối và bắt đầu
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                // Tạo âm thanh 3 nốt
-                oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-                
-                if (play) {
-                    oscillator.start();
-                    oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
-                    oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.4); // B5
-                    oscillator.stop(audioCtx.currentTime + 0.6);
-                    return;
-                }
-                
-                // Xuất ra file audio khi download
-                if (download) {
-                    const length = 0.6;
-                    const offlineCtx = new OfflineAudioContext(1, length * audioCtx.sampleRate, audioCtx.sampleRate);
-                    
-                    const offlineOscillator = offlineCtx.createOscillator();
-                    offlineOscillator.type = 'sine';
-                    
-                    const offlineGain = offlineCtx.createGain();
-                    offlineGain.gain.setValueAtTime(0, offlineCtx.currentTime);
-                    offlineGain.gain.linearRampToValueAtTime(0.3, offlineCtx.currentTime + 0.01);
-                    offlineGain.gain.linearRampToValueAtTime(0, offlineCtx.currentTime + 0.6);
-                    
-                    offlineOscillator.connect(offlineGain);
-                    offlineGain.connect(offlineCtx.destination);
-                    
-                    offlineOscillator.frequency.setValueAtTime(659.25, offlineCtx.currentTime); // E5
-                    offlineOscillator.start();
-                    offlineOscillator.frequency.setValueAtTime(783.99, offlineCtx.currentTime + 0.2); // G5
-                    offlineOscillator.frequency.setValueAtTime(987.77, offlineCtx.currentTime + 0.4); // B5
-                    offlineOscillator.stop(offlineCtx.currentTime + 0.6);
-                    
-                    offlineCtx.startRendering().then(buffer => {
-                        const blob = bufferToWave(buffer, length * audioCtx.sampleRate);
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = 'test-notification.mp3';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
-                        }, 100);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Audio Context not supported or error generating sound', error);
-            }
-        }
-
-        // Function wrappers for the buttons
-        function playMessageSound() {
-            createMessageSound(true, false);
+        // Functions for playing sounds will be added here
+        
+        // Chức năng phát và tải xuống âm thanh sẽ được thêm trong file JavaScript riêng
+        function playBeepMessageSound() {
+            createBeepMessageSound(true, false);
         }
         
-        function downloadMessageSound() {
+        function downloadBeepMessageSound() {
+            createBeepMessageSound(false, true);
+        }
+        
+        function playBeepNewSessionSound() {
+            createBeepNewSessionSound(true, false);
+        }
+        
+        function downloadBeepNewSessionSound() {
+            createBeepNewSessionSound(false, true);
+        }
+        
+        function playBeepNotificationSound() {
+            createBeepNotificationSound(true, false);
+        }
+        
+        function downloadBeepNotificationSound() {
+            createBeepNotificationSound(false, true);
+        }
+        
+        function playBeepTestSound() {
+            createBeepTestSound(true, false);
+        }
+        
+        function downloadBeepTestSound() {
+            createBeepTestSound(false, true);
+        }
+        
+        function playChimeMessageSound() {
+            createChimeMessageSound(true, false);
+        }
+        
+        function downloadChimeMessageSound() {
+            createChimeMessageSound(false, true);
+        }
+        
+        function playChimeNewSessionSound() {
+            createChimeNewSessionSound(true, false);
+        }
+        
+        function downloadChimeNewSessionSound() {
+            createChimeNewSessionSound(false, true);
+        }
+        
+        function playChimeNotificationSound() {
+            createChimeNotificationSound(true, false);
+        }
+        
+        function downloadChimeNotificationSound() {
+            createChimeNotificationSound(false, true);
+        }
+        
+        function playChimeTestSound() {
+            createChimeTestSound(true, false);
+        }
+        
+        function downloadChimeTestSound() {
+            createChimeTestSound(false, true);
+        }
+        
+        function playDingMessageSound() {
+            createDingMessageSound(true, false);
+        }
+        
+        function downloadDingMessageSound() {
+            createDingMessageSound(false, true);
+        }
+        
+        function playDingNewSessionSound() {
+            createDingNewSessionSound(true, false);
+        }
+        
+        function downloadDingNewSessionSound() {
+            createDingNewSessionSound(false, true);
+        }
+        
+        function playDingNotificationSound() {
+            createDingNotificationSound(true, false);
+        }
+        
+        function downloadDingNotificationSound() {
+            createDingNotificationSound(false, true);
+        }
+        
+        function playDingTestSound() {
+            createDingTestSound(true, false);
+        }
+        
+        function downloadDingTestSound() {
+            createDingTestSound(false, true);
+        }
+        
+        function createAllSoundsForAllThemes() {
+            // Mặc định
             createMessageSound(false, true);
-        }
-        
-        function playNewSessionSound() {
-            createNewSessionSound(true, false);
-        }
-        
-        function downloadNewSessionSound() {
-            createNewSessionSound(false, true);
-        }
-        
-        function playNotificationSound() {
-            createNotificationSound(true, false);
-        }
-        
-        function downloadNotificationSound() {
-            createNotificationSound(false, true);
-        }
-        
-        function playTestSound() {
-            createTestSound(true, false);
-        }
-        
-        function downloadTestSound() {
-            createTestSound(false, true);
+            setTimeout(() => createNewSessionSound(false, true), 500);
+            setTimeout(() => createNotificationSound(false, true), 1000);
+            setTimeout(() => createTestSound(false, true), 1500);
+            
+            // Beep
+            setTimeout(() => createBeepMessageSound(false, true), 2000);
+            setTimeout(() => createBeepNewSessionSound(false, true), 2500);
+            setTimeout(() => createBeepNotificationSound(false, true), 3000);
+            setTimeout(() => createBeepTestSound(false, true), 3500);
+            
+            // Chime
+            setTimeout(() => createChimeMessageSound(false, true), 4000);
+            setTimeout(() => createChimeNewSessionSound(false, true), 4500);
+            setTimeout(() => createChimeNotificationSound(false, true), 5000);
+            setTimeout(() => createChimeTestSound(false, true), 5500);
+            
+            // Ding
+            setTimeout(() => createDingMessageSound(false, true), 6000);
+            setTimeout(() => createDingNewSessionSound(false, true), 6500);
+            setTimeout(() => createDingNotificationSound(false, true), 7000);
+            setTimeout(() => createDingTestSound(false, true), 7500);
         }
     </script>
 </body>

@@ -197,14 +197,19 @@ router.post("/end", isStaff, async (req: Request & { user?: any }, res: Response
       metadata: JSON.stringify({
         ...sessionData,
         isHumanAssigned: false,
-        assignedTo: null
+        assignedTo: null,
+        status: 'completed',  // Đánh dấu phiên hoàn thành
+        completedAt: new Date().toISOString(), // Thêm thời gian hoàn thành
+        completedBy: staffId, // Lưu ID nhân viên kết thúc phiên
+        staffName: req.user?.name || 'Staff' // Lưu tên nhân viên
       })
     });
 
     // Thông báo cho client
     io.to(sessionId).emit('support-ended', {
       staffId,
-      timestamp: new Date()
+      timestamp: new Date(),
+      shouldRate: true // Thêm flag yêu cầu đánh giá
     });
 
     // Gửi tin nhắn kết thúc
@@ -384,6 +389,207 @@ router.get("/messages/:sessionId", isStaff, async (req: Request & { user?: any }
   } catch (error) {
     console.error("Error getting chat messages:", error);
     res.status(500).json({ message: "Failed to get chat messages" });
+  }
+});
+
+// API để lấy thống kê phiên hỗ trợ
+router.get("/stats", isStaff, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    const period = req.query.period || 'today';
+    const staffId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!staffId) {
+      return res.status(401).json({ message: "Staff ID not found" });
+    }
+
+    // Lấy tất cả các phiên chat
+    const allSessions = await storage.getAllChatSessions();
+
+    // Xác định thời gian bắt đầu dựa vào period
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (period) {
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'custom':
+        const customStart = req.query.startDate ? new Date(req.query.startDate as string) : new Date();
+        customStart.setDate(customStart.getDate() - 30); // Mặc định 30 ngày nếu không có ngày cụ thể
+        startDate = customStart;
+        break;
+      default: // today
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+    }
+
+    // Lọc phiên chat trong khoảng thời gian
+    const filteredSessions = allSessions.filter(session => {
+      const sessionDate = new Date(session.startedAt || session.lastActivity || Date.now());
+      return sessionDate >= startDate && sessionDate <= now;
+    });
+
+    // Tính toán các số liệu
+    let totalSessions = filteredSessions.length;
+    let completedSessions = 0;
+    let totalResponseTime = 0;
+    let sessionsWithResponseTime = 0;
+    let averageRating = 0;
+    let ratingsCount = 0;
+    let sessionsByDay: Record<string, number> = {};
+    
+    // Dữ liệu theo nhân viên
+    let staffStats: Record<string, { 
+      id: string, 
+      name: string, 
+      sessions: number, 
+      completed: number, 
+      avgResponseTime: number,
+      rating: number
+    }> = {};
+    
+    // Danh sách các đánh giá gần đây
+    let recentRatings: Array<{
+      sessionId: string,
+      rating: number,
+      feedback: string,
+      timestamp: string,
+      staffName: string
+    }> = [];
+
+    // Phân tích từng phiên
+    for (const session of filteredSessions) {
+      let metadata: any = {};
+      try {
+        metadata = session.metadata ? JSON.parse(session.metadata) : {};
+      } catch (e) {
+        console.error("Error parsing session metadata for session", session.id, e);
+        continue;
+      }
+
+      // Đếm phiên đã hoàn thành
+      if (metadata.status === 'completed') {
+        completedSessions++;
+      }
+
+      // Tính thời gian phản hồi trung bình
+      if (metadata.firstResponseTime && metadata.firstCustomerMessageTime) {
+        const responseTime = 
+          (new Date(metadata.firstResponseTime).getTime() - 
+           new Date(metadata.firstCustomerMessageTime).getTime()) / 1000 / 60; // Phút
+        
+        if (responseTime > 0) {
+          totalResponseTime += responseTime;
+          sessionsWithResponseTime++;
+        }
+      }
+
+      // Đánh giá trung bình
+      if (metadata.rating) {
+        averageRating += metadata.rating;
+        ratingsCount++;
+        
+        // Thu thập các đánh giá gần đây
+        recentRatings.push({
+          sessionId: session.id,
+          rating: metadata.rating,
+          feedback: metadata.feedback || '',
+          timestamp: metadata.ratedAt || metadata.completedAt || session.lastActivity,
+          staffName: metadata.staffName || 'Nhân viên'
+        });
+      }
+
+      // Thống kê theo ngày
+      const sessionDate = new Date(session.startedAt || session.lastActivity || Date.now());
+      const dateKey = sessionDate.toISOString().split('T')[0];
+      sessionsByDay[dateKey] = (sessionsByDay[dateKey] || 0) + 1;
+      
+      // Thống kê theo nhân viên
+      if (metadata.assignedTo) {
+        if (!staffStats[metadata.assignedTo]) {
+          // Tìm tên nhân viên từ DB hoặc dùng ID nếu không tìm thấy
+          // Giả lập: sẽ cập nhật tên thật sau
+          staffStats[metadata.assignedTo] = {
+            id: metadata.assignedTo,
+            name: metadata.staffName || `Staff ${metadata.assignedTo.substring(0, 6)}`,
+            sessions: 0,
+            completed: 0,
+            avgResponseTime: 0,
+            rating: 0
+          };
+        }
+        
+        staffStats[metadata.assignedTo].sessions++;
+        
+        if (metadata.status === 'completed') {
+          staffStats[metadata.assignedTo].completed++;
+        }
+        
+        if (metadata.rating) {
+          staffStats[metadata.assignedTo].rating += metadata.rating;
+        }
+      }
+    }
+
+    // Tính trung bình
+    const avgResponseTime = sessionsWithResponseTime > 0 
+      ? (totalResponseTime / sessionsWithResponseTime).toFixed(2) 
+      : 0;
+    
+    const avgRating = ratingsCount > 0 
+      ? (averageRating / ratingsCount).toFixed(1) 
+      : 0;
+    
+    // Tính trung bình cho từng nhân viên
+    Object.keys(staffStats).forEach(staffId => {
+      const staff = staffStats[staffId];
+      staff.avgResponseTime = parseFloat((totalResponseTime / (staff.sessions || 1)).toFixed(2));
+      staff.rating = staff.rating > 0 ? parseFloat((staff.rating / staff.sessions).toFixed(1)) : 0;
+    });
+
+    // Tạo dữ liệu cho biểu đồ (7 ngày gần nhất)
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().split('T')[0];
+      const formattedDate = `${d.getDate()}/${d.getMonth() + 1}`;
+      
+      last7Days.push({
+        date: formattedDate,
+        count: sessionsByDay[dateKey] || 0
+      });
+    }
+    
+    // Sắp xếp đánh giá gần đây theo thời gian và giới hạn số lượng
+    recentRatings.sort((a, b) => {
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+    
+    // Giới hạn số lượng đánh giá hiển thị (tối đa 10 đánh giá gần nhất)
+    const limitedRatings = recentRatings.slice(0, 10);
+
+    // Trả về kết quả
+    res.json({
+      totalSessions,
+      completedSessions,
+      avgResponseTime,
+      avgRating: `${avgRating}/5`,
+      sessionsByDay: last7Days,
+      staffStats: Object.values(staffStats),
+      recentRatings: limitedRatings // Thêm danh sách đánh giá gần đây
+    });
+    
+  } catch (error) {
+    console.error("Error getting stats:", error);
+    res.status(500).json({ message: "Failed to get statistics" });
   }
 });
 
