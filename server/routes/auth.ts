@@ -52,7 +52,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = jwt.sign({ 
       id: user.id, 
       username: user.username,
-      role: user.role,
+      role: user.role || 'user',
       name: user.name
     }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -98,6 +98,11 @@ router.get('/verify', async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Người dùng không tồn tại' });
     }
     
+    // Đảm bảo trường role luôn tồn tại
+    if (!user.role) {
+      user.role = 'user';
+    }
+    
     const { password, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
   } catch (error) {
@@ -121,7 +126,7 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại' });
     }
 
-    // Tạo user mới
+    // Tạo user mới với role là user
     const newUser = await storage.createUser({
       username,
       email,
@@ -129,12 +134,17 @@ router.post('/register', async (req: Request, res: Response) => {
       name: name || username
     });
 
+    // Gán role sau khi tạo user
+    if (!newUser.role) {
+      newUser.role = 'user';
+    }
+
     // Tạo token JWT
     const token = jwt.sign(
       { 
         id: newUser.id, 
         username: newUser.username,
-        role: newUser.role,
+        role: newUser.role || 'user',
         name: newUser.name
       }, 
       JWT_SECRET, 

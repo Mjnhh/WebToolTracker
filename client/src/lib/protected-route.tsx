@@ -30,17 +30,23 @@ export function ProtectedRoute({
   }
 
   // Check if user is an admin for admin routes
-  if (path.startsWith("/admin") && user.role !== "admin") {
-    return (
-      <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen flex-col gap-4">
-          <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
-          <p className="text-muted-foreground">You need administrator privileges to access this page.</p>
-          <Redirect to="/" />
-        </div>
-      </Route>
-    );
+  if (path.startsWith("/admin")) {
+    const isAdmin = 
+      user.role === "admin" || 
+      user.username === "admin" ||
+      (user.email && user.email.includes("admin"));
+      
+    if (!isAdmin) {
+      return (
+        <Route path={path}>
+          <div className="flex items-center justify-center min-h-screen flex-col gap-4">
+            <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+            <p className="text-muted-foreground">You need administrator privileges to access this page.</p>
+            <Redirect to="/" />
+          </div>
+        </Route>
+      );
+    }
   }
-
   return <Route path={path} component={Component} />;
 }

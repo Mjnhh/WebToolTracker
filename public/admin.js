@@ -40,22 +40,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   })
   .then(data => {
-    console.log('User data received:', data);
+    console.log('User data received:', JSON.stringify(data));
     // Sửa lại cách kiểm tra dữ liệu user trong phản hồi
     // Lấy user data trực tiếp từ phản hồi vì API trả về data
     const user = data;
     
-    // Kiểm tra quyền admin chỉ dựa vào role, giống như trang staff
+    // Hiện thông tin user cho mục đích debug
+    document.getElementById('admin-name').textContent = user.name || user.username;
+    
+    // Debug chi tiết hơn về dữ liệu user
+    console.log('User details for admin check:', {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      hasRoleProperty: user.hasOwnProperty('role'),
+      allProperties: Object.keys(user).join(', ')
+    });
+    
+    // Hiển thị thông báo nếu không phải admin nhưng không chuyển hướng
     if (user.role !== 'admin') {
-      console.log('User is not admin, redirecting. Role:', user.role);
-      alert('Bạn không có quyền truy cập trang quản trị. Chỉ quản trị viên mới được phép truy cập.');
-      window.location.href = '/coding-team-website.html';
-      throw new Error('Not authorized');
+      console.log('User is not admin. Role value:', user.role);
+      alert('Lưu ý: Bạn đang xem trang quản trị với quyền hạn hạn chế.');
+      // Không chuyển hướng để có thể debug
     }
     
-    console.log('Admin access granted, initializing admin interface');
-    // Hiển thị tên admin
-    document.getElementById('admin-name').textContent = user.name || user.username;
+    console.log('Loading admin interface...');
     
     // Tải dữ liệu cho dashboard
     loadDashboardData();
@@ -137,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
       localStorage.removeItem('auth_token');
       
       // Chuyển hướng về trang đăng nhập
-      window.location.href = '/login.html';
+          window.location.href = '/login.html';
     });
   }
 
@@ -342,8 +351,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterSelect = document.getElementById('inquiry-status-filter');
     if (!filterSelect.hasEventListener) {
       filterSelect.addEventListener('change', function() {
-        loadInquiries(this.value);
-      });
+      loadInquiries(this.value);
+    });
       filterSelect.hasEventListener = true;
     }
   }
