@@ -4,85 +4,11 @@ let currentSessionId = null;
 let socket = null;
 let sessionList = [];
 let activeSessions = [];
-let notificationSound = null;
-let notificationEnabled = true;
-let browserNotificationEnabled = false;
-let receivedMessageIds = new Set();
+let receivedMessageIds = new Set(); // Set lưu trữ ID tin nhắn đã hiển thị
+let tempMessageMap = new Map(); // Map lưu trữ tin nhắn tạm và ID thật của chúng
 const API_BASE_URL = '/api';
 let isSendingMessage = false; // Biến trạng thái để ngăn chặn gửi nhiều lần
-
-// Khởi tạo âm thanh thông báo
-function initializeNotificationSound() {
-  // Khởi tạo âm thanh thông báo
-  notificationSound = new Audio('/sounds/notification.mp3');
-  
-  // Tạo fallback nếu file không tồn tại
-  notificationSound.onerror = function() {
-    console.log('Âm thanh thông báo không tồn tại, tạo âm thanh dự phòng');
-    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    let oscillator = audioContext.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 800;
-    oscillator.connect(audioContext.destination);
-    
-    // Chỉ phát trong 200ms
-    oscillator.start();
-    setTimeout(function() {
-      oscillator.stop();
-    }, 200);
-  };
-}
-
-// Khởi tạo thông báo trình duyệt
-function initializeNotifications() {
-  // Kiểm tra hỗ trợ
-  if (!("Notification" in window)) {
-    console.log("Trình duyệt này không hỗ trợ thông báo");
-    return;
-  }
-  
-  // Yêu cầu quyền
-  if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(function(permission) {
-      if (permission === "granted") {
-        browserNotificationEnabled = true;
-        console.log("Đã bật thông báo trình duyệt");
-      }
-    });
-  }
-}
-
-// Gửi thông báo
-function sendNotification(title, message) {
-  // Phát âm thanh nếu được bật
-  if (notificationEnabled && notificationSound) {
-    notificationSound.play().catch(error => {
-      console.log('Không thể phát âm thanh thông báo:', error);
-    });
-  }
-  
-  // Gửi thông báo trình duyệt nếu được bật và có quyền
-  if (browserNotificationEnabled && Notification.permission === "granted") {
-    // Chỉ hiển thị thông báo nếu trang không ở trạng thái focus
-    if (!document.hasFocus()) {
-      const notification = new Notification(title, {
-        body: message,
-        icon: '/favicon.ico'
-      });
-      
-      // Tự động đóng sau 5 giây
-      setTimeout(() => {
-        notification.close();
-      }, 5000);
-      
-      // Khi người dùng click vào thông báo
-      notification.onclick = function() {
-        window.focus();
-        this.close();
-      };
-    }
-  }
-}
+let isLoadingMessages = false; // Biến trạng thái để ngăn chặn việc tải tin nhắn nhiều lần
 
 // Khởi tạo kết nối socket
 function initializeSocket() {
@@ -96,14 +22,6 @@ function initializeSocket() {
   socket.on('connect', () => {
     console.log('Socket connected successfully');
     socket.emit('join-room', 'support-staff');
-    // Cập nhật trạng thái online cho giao diện
-    updateConnectionStatus(true);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected');
-    // Cập nhật trạng thái offline cho giao diện
-    updateConnectionStatus(false);
   });
 
   socket.on('new-support-request', (session) => {
@@ -112,69 +30,59 @@ function initializeSocket() {
     if (!sessionList.some(s => s.id === session.id)) {
       sessionList.push(session);
       updateSessionsList();
-      // Gửi thông báo có phiên chat mới
-      sendNotification('Yêu cầu hỗ trợ mới', `Phiên ${session.id} đang cần hỗ trợ`);
     }
+  });
+
+  // Lắng nghe tin nhắn mới từ socket
+  socket.on('new-message', (message) => {
+    console.log('Nhận tin nhắn mới qua socket:', message);
+    
+    // Kiểm tra xem tin nhắn có thuộc phiên hiện tại và có ID hợp lệ không
+    if (!message || !message.id || !message.sessionId || message.sessionId !== currentSessionId) {
+      return;
+    }
+    
+    // Kiểm tra xem tin nhắn đã hiển thị chưa
+    if (receivedMessageIds.has(message.id)) {
+      console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
+      return;
+    }
+    
+    // Tìm tin nhắn tạm thời tương ứng
+    const tempId = tempMessageMap.get(message.id);
+    if (tempId) {
+      // Tìm phần tử tạm trong DOM
+      const tempElement = document.querySelector(`.message-item[data-message-id="${tempId}"]`);
+      if (tempElement) {
+        console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, cập nhật ID`);
+        tempElement.dataset.messageId = message.id;
+        delete tempElement.dataset.tempRef;
+        
+        // Đánh dấu tin nhắn đã được xử lý
+        receivedMessageIds.add(message.id);
+        
+        // Xóa khỏi map tạm
+        tempMessageMap.delete(message.id);
+        return;
+      }
+    }
+    
+    // Nếu không tìm thấy phiên bản tạm, thêm tin nhắn mới
+    receivedMessageIds.add(message.id);
+    appendMessage(message);
+    scrollToBottom();
+    
+    // Cập nhật danh sách phiên với tin nhắn mới
+    updateSessionWithNewMessage(message);
   });
 
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error);
-    // Cập nhật trạng thái offline cho giao diện
-    updateConnectionStatus(false);
   });
-  
-  // Theo dõi trạng thái người dùng
-  socket.on('user-status-change', (data) => {
-    console.log('User status changed:', data);
-    updateUserStatus(data.sessionId, data.status);
-  });
-}
-
-// Cập nhật trạng thái kết nối
-function updateConnectionStatus(isConnected) {
-  const statusIndicator = document.getElementById('connection-status');
-  if (!statusIndicator) return;
-  
-  if (isConnected) {
-    statusIndicator.className = 'status-indicator online';
-    statusIndicator.title = 'Đang kết nối';
-  } else {
-    statusIndicator.className = 'status-indicator offline';
-    statusIndicator.title = 'Mất kết nối';
-  }
-}
-
-// Cập nhật trạng thái người dùng
-function updateUserStatus(sessionId, status) {
-  // Cập nhật trong danh sách phiên
-  const sessionItem = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
-  if (sessionItem) {
-    const statusIndicator = sessionItem.querySelector('.user-status');
-    if (statusIndicator) {
-      statusIndicator.className = `user-status ${status}`;
-      statusIndicator.title = status === 'online' ? 'Đang trực tuyến' : 'Ngoại tuyến';
-    }
-  }
-  
-  // Cập nhật trong phiên đang mở
-  if (currentSessionId === sessionId) {
-    const chatHeader = document.querySelector('.chat-header');
-    if (chatHeader) {
-      const headerStatus = chatHeader.querySelector('.user-status');
-      if (headerStatus) {
-        headerStatus.className = `user-status ${status}`;
-        headerStatus.title = status === 'online' ? 'Đang trực tuyến' : 'Ngoại tuyến';
-      }
-    }
-  }
 }
 
 // Hàm khởi tạo khi tải xong trang
 document.addEventListener('DOMContentLoaded', () => {
-  // Khởi tạo âm thanh và thông báo
-  initializeNotificationSound();
-  initializeNotifications();
-  
   // Kiểm tra đăng nhập
   checkLoginStatus();
 
@@ -220,7 +128,7 @@ function checkLoginStatus() {
     // Hiển thị tên và vai trò
     const staffName = document.getElementById('staff-name');
     if (staffName) {
-      staffName.textContent = `${userData.name} (${userData.role})`;
+      staffName.textContent = `${userData.name || userData.username}`;
     }
   })
   .catch(error => {
@@ -285,44 +193,153 @@ function setupEventListeners() {
     endSessionBtn.addEventListener('click', endSession);
   }
 
-  // Trả lời nhanh
-  const quickResponses = document.querySelectorAll('.quick-response-item');
-  if (quickResponses) {
-    quickResponses.forEach(item => {
-      item.addEventListener('click', () => insertQuickResponse(item.textContent));
-    });
-  }
+  // Thiết lập chuyển tab
+  setupTabNavigation();
+  
+  // Thiết lập cài đặt
+  setupSettings();
+}
 
-  // Mẫu trả lời
-  const templateBtns = document.querySelectorAll('.template-btn');
-  if (templateBtns) {
-    templateBtns.forEach(btn => {
-      btn.addEventListener('click', () => insertTemplate(btn.dataset.template));
-    });
-  }
-
-  // Bật/tắt thông báo âm thanh
-  const notificationToggle = document.getElementById('notification-toggle');
-  if (notificationToggle) {
-    // Khởi tạo trạng thái ban đầu
-    notificationToggle.checked = notificationEnabled;
-    
-    notificationToggle.addEventListener('change', function() {
-      notificationEnabled = this.checked;
-      localStorage.setItem('notification_enabled', notificationEnabled);
+// Thiết lập điều hướng tab
+function setupTabNavigation() {
+  const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+  const contentSections = document.querySelectorAll('.content-section');
+  
+  menuItems.forEach(item => {
+    item.addEventListener('click', () => {
+      // Xóa trạng thái active từ tất cả các menu items
+      menuItems.forEach(mi => mi.classList.remove('active'));
       
-      if (notificationEnabled) {
-        // Yêu cầu quyền thông báo nếu cần
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-          Notification.requestPermission().then(function(permission) {
-            browserNotificationEnabled = permission === 'granted';
-          });
-        }
-        showNotification('Thông báo đã được bật');
-      } else {
-        console.log('Thông báo đã tắt');
+      // Thêm trạng thái active cho menu item được chọn
+      item.classList.add('active');
+      
+      // Ẩn tất cả các phần nội dung
+      contentSections.forEach(section => section.classList.remove('active'));
+      
+      // Hiển thị phần nội dung tương ứng
+      const targetSection = item.dataset.section;
+      const contentSection = document.getElementById(`${targetSection}-section`);
+      if (contentSection) {
+        contentSection.classList.add('active');
       }
     });
+  });
+}
+
+// Thiết lập cài đặt
+function setupSettings() {
+  // Dark mode toggle
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  if (darkModeToggle) {
+    // Kiểm tra cài đặt đã lưu
+    const darkMode = localStorage.getItem('dark-mode') === 'true';
+    darkModeToggle.checked = darkMode;
+    
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    }
+    
+    darkModeToggle.addEventListener('change', () => {
+      if (darkModeToggle.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('dark-mode', 'true');
+      } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('dark-mode', 'false');
+      }
+    });
+  }
+  
+  // Font size setting
+  const fontSizeSetting = document.getElementById('font-size-setting');
+  if (fontSizeSetting) {
+    // Kiểm tra cài đặt đã lưu
+    const fontSize = localStorage.getItem('font-size') || 'medium';
+    fontSizeSetting.value = fontSize;
+    
+    document.body.classList.add(`font-${fontSize}`);
+    
+    fontSizeSetting.addEventListener('change', () => {
+      // Xóa tất cả các class font size
+      document.body.classList.remove('font-small', 'font-medium', 'font-large');
+      // Thêm class mới
+      document.body.classList.add(`font-${fontSizeSetting.value}`);
+      localStorage.setItem('font-size', fontSizeSetting.value);
+    });
+  }
+  
+  // Lưu cài đặt
+  const saveSettingsBtn = document.getElementById('save-settings');
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', () => {
+      // Hiển thị thông báo đã lưu
+      alert('Đã lưu cài đặt của bạn!');
+    });
+  }
+  
+  // Cài đặt mẫu câu trả lời
+  setupTemplates();
+}
+
+// Thiết lập mẫu câu trả lời
+function setupTemplates() {
+  // Sự kiện khi nhấp vào mẫu câu
+  const templateItems = document.querySelectorAll('.template-item .template-content');
+  templateItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const templateText = item.textContent.trim();
+      insertTemplate(templateText);
+    });
+  });
+  
+  // Nút thêm mẫu mới
+  const addTemplateBtn = document.getElementById('add-template-btn');
+  if (addTemplateBtn) {
+    addTemplateBtn.addEventListener('click', () => {
+      // Đây là nơi bạn sẽ hiển thị modal để thêm mẫu mới
+      alert('Tính năng đang phát triển');
+    });
+  }
+  
+  // Nút sửa mẫu
+  const editBtns = document.querySelectorAll('.template-edit-btn');
+  editBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const templateItem = btn.closest('.template-item');
+      const templateContent = templateItem.querySelector('.template-content p').textContent;
+      // Đây là nơi bạn sẽ hiển thị modal để sửa mẫu
+      alert(`Sửa mẫu: ${templateContent}`);
+    });
+  });
+  
+  // Nút xóa mẫu
+  const deleteBtns = document.querySelectorAll('.template-delete-btn');
+  deleteBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Bạn có chắc muốn xóa mẫu này không?')) {
+        const templateItem = btn.closest('.template-item');
+        templateItem.remove();
+      }
+    });
+  });
+}
+
+// Chèn mẫu câu vào ô nhập tin nhắn
+function insertTemplate(text) {
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    // Thay thế các biến trong mẫu
+    let processedText = text;
+    
+    // Thay thế ${name} bằng tên nhân viên
+    if (currentUser) {
+      processedText = processedText.replace('${name}', currentUser.name || currentUser.username);
+    }
+    
+    chatInput.value = processedText;
+    chatInput.focus();
   }
 }
 
@@ -360,173 +377,59 @@ function handleLogin(event) {
       throw new Error('No permission');
     }
 
-    // Lưu token JWT
+    // Lưu token
     localStorage.setItem('auth_token', data.token);
+    
+    // Cập nhật user hiện tại
     currentUser = data.user;
-
-    // Chuyển sang giao diện nhân viên
+    
+    // Ẩn form đăng nhập
     hideLoginForm();
+    
+    // Khởi tạo giao diện
     initializeStaffInterface();
+    
+    // Hiển thị tên và vai trò
+    const staffName = document.getElementById('staff-name');
+    if (staffName) {
+      staffName.textContent = `${data.user.name || data.user.username}`;
+    }
   })
   .catch(error => {
     console.error('Login error:', error);
-    if (errorElement) errorElement.textContent = 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.';
+    if (errorElement) {
+      errorElement.textContent = 'Tên đăng nhập hoặc mật khẩu không đúng';
+      errorElement.style.display = 'block';
+    }
   });
-}
-
-// Xử lý đăng xuất
-function handleLogout() {
-  // Xóa token JWT khỏi localStorage
-  localStorage.removeItem('auth_token');
-  currentUser = null;
-
-  // Ngắt kết nối socket nếu có
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-
-  // Quay lại trang đăng nhập
-  showLoginForm();
 }
 
 // Khởi tạo giao diện nhân viên
 function initializeStaffInterface() {
-  // Khôi phục trạng thái thông báo từ localStorage
-  const savedNotificationState = localStorage.getItem('notification_enabled');
-  if (savedNotificationState !== null) {
-    notificationEnabled = savedNotificationState === 'true';
-    const notificationToggle = document.getElementById('notification-toggle');
-    if (notificationToggle) {
-      notificationToggle.checked = notificationEnabled;
-    }
-  }
-
-  // Khởi tạo kết nối socket
+  // Khởi tạo socket
   initializeSocket();
-
-  // Tải danh sách phiên chat
-  fetchSupportSessions();
   
-  // Hiển thị tên nhân viên
-  const staffNameElement = document.getElementById('staff-name');
-  if (staffNameElement) staffNameElement.textContent = currentUser.name || currentUser.username;
-
-  // Kết nối socket
-  connectSocket();
-
   // Tải danh sách phiên hỗ trợ
   fetchSupportSessions();
 }
 
-// Kết nối WebSocket
-function connectSocket() {
+// Xử lý logout
+function handleLogout() {
+  // Xóa token
+  localStorage.removeItem('auth_token');
+  
+  // Ngắt kết nối socket
   if (socket) {
     socket.disconnect();
   }
-
-  // Lấy token xác thực
-  const token = localStorage.getItem('auth_token');
-
-  // Kết nối socket với xác thực
-  socket = io({
-    auth: {
-      token: token
-    },
-    query: {
-      type: 'staff'
-    }
-  });
-
-  // Tham gia kênh hỗ trợ
-  socket.on('connect', () => {
-    console.log('Socket connected to server');
-    socket.emit('join-room', 'support-staff');
-
-    // Khi chuyển phiên chat, tham gia phòng mới
-    if (currentSessionId) {
-      socket.emit('join-chat', { sessionId: currentSessionId });
-    }
-  });
-
-  // Sự kiện nhận tin nhắn mới
-  socket.on('new-message', message => {
-    console.log('Received new message via socket:', message);
-
-    // Bỏ qua tin nhắn không hợp lệ
-    if (!message || !message.id) {
-      console.log('Tin nhắn không hợp lệ, bỏ qua');
-      return;
-    }
-
-    // Kiểm tra chặt chẽ hơn - thêm kiểm tra sessionId
-    if (!message.sessionId || message.sessionId !== currentSessionId) {
-      console.log(`Tin nhắn không thuộc phiên hiện tại hoặc không có sessionId, bỏ qua`);
-      if (message.sessionId !== currentSessionId) {
-        // Vẫn cập nhật danh sách phiên nếu có tin nhắn mới từ phiên khác
-        updateSessionWithNewMessage(message);
-      }
-      return;
-    }
-    // Khai báo một Set để lưu trữ mốc thời gian của các tin nhắn đã hiển thị
-const displayedMessageTimestamps = new Set();
-
-// Hàm xử lý tin nhắn mới
-function handleNewMessage(message) {
-    const messageTimestamp = message.timestamp; // Giả sử message có thuộc tính timestamp
-
-    // Kiểm tra xem mốc thời gian đã hiển thị chưa
-    if (!displayedMessageTimestamps.has(messageTimestamp)) {
-        // Nếu chưa, hiển thị tin nhắn và thêm mốc thời gian vào Set
-        renderMessage(message);
-        displayedMessageTimestamps.add(messageTimestamp);
-    }
-}
-    // Kiểm tra xem tin nhắn đã được xử lý chưa (sử dụng cả ID và timestamp)
-    const messageIdentifier = `${message.id}-${message.timestamp || Date.now()}`;
-    if (receivedMessageIds.has(messageIdentifier) || receivedMessageIds.has(message.id)) {
-      console.log(`Tin nhắn trùng lặp với identifier ${messageIdentifier}, bỏ qua`);
-      return;
-    }
-
-    // Kiểm tra thêm xem tin nhắn đã tồn tại trong DOM chưa
-    const existingMessage = document.querySelector(`.message-item[data-message-id="${message.id}"]`);
-    if (existingMessage) {
-      console.log(`Tin nhắn ${message.id} đã tồn tại trong DOM, bỏ qua`);
-      return;
-    }
-
-    // Kiểm tra xem tin nhắn có phải tin nhắn tạm thời không (gửi từ chính nhân viên này)
-    // Tin nhắn tạm thường có ID bắt đầu bằng "temp-"
-    if (message.sender === 'staff' && document.querySelector(`.message-item[data-message-id^="temp-"][data-temp-ref="${message.id}"]`)) {
-      console.log(`Tin nhắn ${message.id} là phiên bản chính thức của tin nhắn tạm, bỏ qua`);
-      return;
-    }
-
-    // Thêm identifier vào danh sách đã xử lý
-    receivedMessageIds.add(messageIdentifier);
-    receivedMessageIds.add(message.id);
-
-    // Giới hạn kích thước của Set để tránh tiêu thụ quá nhiều bộ nhớ
-    if (receivedMessageIds.size > 100) {
-      const idsArray = Array.from(receivedMessageIds);
-      for (let i = 0; i < idsArray.length - 100; i++) {
-        receivedMessageIds.delete(idsArray[i]);
-      }
-    }
-
-    // Thêm tin nhắn và cuộn xuống
-    appendMessage(message);
-    scrollToBottom();
-  });
-
-  // Sự kiện có phiên yêu cầu hỗ trợ mới
-  socket.on('session-needs-support', session => {
-    fetchSupportSessions();
-
-    // Hiển thị thông báo
-    showNotification(`Phiên ${session.id} cần hỗ trợ`);
-  });
+  
+  // Reset state
+  currentUser = null;
+  currentSessionId = null;
+  sessionList = [];
+  
+  // Hiển thị form đăng nhập
+  showLoginForm();
 }
 
 // Tải danh sách phiên hỗ trợ
@@ -677,18 +580,57 @@ function selectSession(sessionId) {
   const chatContainer = document.getElementById('chat-container');
   if (chatContainer) {
     chatContainer.innerHTML = `
-      <div class="chat-header">
-        <div class="user-name">Phiên ${sessionId.substr(0, 8)}...</div>
-        <button onclick="endSession()" class="end-session-btn">Kết thúc</button>
-      </div>
-      <div id="chat-messages" class="chat-messages"></div>
-      <div class="chat-input-form">
-        <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
-        <button onclick="sendMessage()">Gửi</button>
+      <div class="chat-support-container">
+        <div class="chat-header">
+          <div class="chat-header-info">
+            <span class="session-badge">Phiên ${sessionId.substr(0, 8)}...</span>
+          </div>
+          <div class="chat-header-actions">
+            <button id="end-session-btn" class="chat-header-button end-session" title="Kết thúc phiên">
+              <i class="fas fa-times-circle"></i>
+            </button>
+          </div>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-form">
+          <input type="text" id="chat-input" placeholder="Nhập tin nhắn của bạn...">
+          <button id="send-message-btn">
+            <i class="fas fa-paper-plane"></i> Gửi
+          </button>
+        </div>
+        <div class="quick-responses">
+          <div class="quick-response-item">Xin chào!</div>
+          <div class="quick-response-item">Tôi có thể giúp gì cho bạn?</div>
+          <div class="quick-response-item">Vui lòng đợi trong giây lát.</div>
+          <div class="quick-response-item">Cảm ơn bạn đã liên hệ với chúng tôi.</div>
+        </div>
       </div>
     `;
-  }
 
+    // Thêm lại các event handler cho các nút mới
+    const sendButton = document.getElementById('send-message-btn');
+    if (sendButton) {
+      sendButton.addEventListener('click', sendMessage);
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    const endSessionBtn = document.getElementById('end-session-btn');
+    if (endSessionBtn) {
+      endSessionBtn.addEventListener('click', endSession);
+    }
+
+    // Thiết lập câu trả lời nhanh
+    setupQuickResponses();
+  }
 
   // Kết nối socket với phiên hiện tại
   joinChatSession(sessionId);
@@ -714,12 +656,36 @@ function selectSession(sessionId) {
   }
 }
 
+// Thiết lập câu trả lời nhanh
+function setupQuickResponses() {
+  const quickResponseItems = document.querySelectorAll('.quick-response-item');
+  if (quickResponseItems) {
+    quickResponseItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+          chatInput.value = item.textContent;
+          chatInput.focus();
+        }
+      });
+    });
+  }
+}
+
 // Tham gia vào phiên chat qua socket
 function joinChatSession(sessionId) {
   if (socket) {
+    // Rời khỏi tất cả các phòng chat trước đó
+    if (socket.previousSessionId) {
+      socket.emit('leave-room', socket.previousSessionId);
+    }
+    
     // Tham gia vào room với sessionId
     socket.emit('join-room', sessionId);
     socket.emit('join-chat', { sessionId: sessionId });
+    
+    // Lưu sessionId hiện tại để có thể rời phòng sau này
+    socket.previousSessionId = sessionId;
 
     console.log(`Joined chat session: ${sessionId}`);
   }
@@ -727,13 +693,17 @@ function joinChatSession(sessionId) {
 
 // Tải tin nhắn của phiên
 function fetchSessionMessages(sessionId) {
-  // Kiểm tra nếu đang gọi API để tránh gọi nhiều lần
-  if (fetchSessionMessages.isFetching) {
-    console.log('Đang tải tin nhắn, bỏ qua yêu cầu trùng lặp');
+  // Kiểm tra nếu đang gọi API hoặc sessionId không hợp lệ
+  if (isLoadingMessages || !sessionId) {
+    console.log('Không thể tải tin nhắn: đang tải hoặc sessionId không hợp lệ');
     return;
   }
 
-  fetchSessionMessages.isFetching = true;
+  isLoadingMessages = true;
+
+  // Đặt lại biến theo dõi tin nhắn khi chuyển phiên
+  receivedMessageIds.clear();
+  tempMessageMap.clear();
 
   const messagesContainer = document.getElementById('chat-messages');
   if (messagesContainer) messagesContainer.innerHTML = '<div class="loading-messages">Đang tải tin nhắn...</div>';
@@ -764,10 +734,16 @@ function fetchSessionMessages(sessionId) {
       // Sắp xếp tin nhắn theo thời gian (đảm bảo hiển thị đúng thứ tự)
       data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-      // Đặt lại receivedMessageIds để tránh trùng lặp khi chuyển phiên
-      receivedMessageIds = new Set();
-
-      renderMessages(data);
+      // Xóa tin nhắn hiện tại trước khi hiển thị tin nhắn mới
+      messagesContainer.innerHTML = '';
+      
+      // Hiển thị tin nhắn mới
+      data.forEach(message => {
+        if (message && message.id) {
+          receivedMessageIds.add(message.id);
+          appendMessage(message);
+        }
+      });
 
       // Cuộn xuống tin nhắn mới nhất
       scrollToBottom();
@@ -781,8 +757,7 @@ function fetchSessionMessages(sessionId) {
     if (messagesContainer) messagesContainer.innerHTML = '<div class="error-message">Lỗi khi tải tin nhắn</div>';
   })
   .finally(() => {
-    // Đánh dấu là đã hoàn thành gọi API
-    fetchSessionMessages.isFetching = false;
+    isLoadingMessages = false;
   });
 }
 
@@ -897,80 +872,63 @@ function renderMessages(messages) {
 
 // Thêm tin nhắn vào khung chat
 function appendMessage(message) {
-    const messagesContainer = document.getElementById('chat-messages');
-    if (messagesContainer) {
-        // Kiểm tra xem tin nhắn đã tồn tại chưa
-        if (message.id && typeof message.id === 'string') {
-            const existingMessage = document.querySelector(`.message-item[data-message-id="${message.id}"]`);
-            if (existingMessage) {
-                console.log(`Tin nhắn có ID ${message.id} đã tồn tại trong DOM, bỏ qua`);
-                return; // Bỏ qua nếu tin nhắn đã tồn tại
-            }
-        }
+  if (!message || !message.content) {
+    console.error('Invalid message object:', message);
+    return;
+  }
+  
+  const messagesContainer = document.getElementById('chat-messages');
+  if (!messagesContainer) return;
 
-        // Tạo phần tử tin nhắn mới
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${message.sender} message-item`;
-        messageElement.dataset.messageId = message.id;
+  // Tạo phần tử tin nhắn mới
+  const messageElement = document.createElement('div');
+  messageElement.className = `message ${message.sender} message-item`;
+  messageElement.dataset.messageId = message.id;
 
-        // Định dạng thời gian
-        const messageTime = formatTime(new Date(message.timestamp));
+  // Định dạng thời gian
+  const messageTime = formatTime(new Date(message.timestamp));
 
-        // Hiển thị người gửi
-        let senderName = '';
-        if (message.sender === 'user') {
-            senderName = '<div class="sender">Khách hàng</div>';
-        } else if (message.sender === 'bot') {
-            senderName = '<div class="sender">Chatbot</div>';
-        } else if (message.sender === 'staff') {
-            senderName = '<div class="sender">Nhân viên</div>';
-        }
+  // Hiển thị người gửi
+  let senderName = '';
+  if (message.sender === 'user') {
+    senderName = '<div class="sender">Khách hàng</div>';
+  } else if (message.sender === 'bot') {
+    senderName = '<div class="sender">Chatbot</div>';
+  } else if (message.sender === 'staff') {
+    senderName = '<div class="sender">Nhân viên</div>';
+  } else if (message.sender === 'system') {
+    senderName = '<div class="sender">Hệ thống</div>';
+  }
 
-        messageElement.innerHTML = `
-            ${senderName}
-            <div class="content">${message.content}</div>
-            <div class="time">${messageTime}</div>
-        `;
+  messageElement.innerHTML = `
+    ${senderName}
+    <div class="content">${message.content}</div>
+    <div class="time">${messageTime}</div>
+  `;
 
-        messagesContainer.appendChild(messageElement);
-        console.log(`Đã thêm tin nhắn ${message.id} với nội dung "${message.content}"`);
-    }
+  messagesContainer.appendChild(messageElement);
+  console.log(`Đã thêm tin nhắn ${message.id} với nội dung "${message.content}"`);
 }
 
 // Gửi tin nhắn
 function sendMessage() {
-  if (isSendingMessage) {
-    console.log('Đang trong quá trình gửi tin nhắn, bỏ qua yêu cầu mới');
-    return; // Ngăn chặn gửi nhiều lần
-  }
-  
+  if (isSendingMessage) return; // Ngăn chặn gửi nhiều lần
+  isSendingMessage = true;
+
   const input = document.getElementById('chat-input');
   const content = input.value.trim();
-  const sendBtn = document.getElementById('send-message-btn');
 
   if (!content || !currentSessionId) {
+    isSendingMessage = false; // Đặt lại trạng thái
     return;
   }
 
-  // Đánh dấu đang gửi
-  isSendingMessage = true;
-  
-  // Vô hiệu hóa nút gửi để tránh click nhiều lần
-  if (sendBtn) {
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<span class="sending-spinner"></span> Đang gửi...';
-  }
-
-  // Lưu tin nhắn input trước khi xóa để khôi phục nếu cần
-  const originalMessage = content;
-  
-  // Xóa nội dung input ngay lập tức để cải thiện UX 
-  input.value = '';
+  const token = localStorage.getItem('auth_token');
 
   // Tạo ID duy nhất cho tin nhắn tạm
   const tempId = 'temp-' + Date.now();
 
-  // Tạo một tin nhắn tạm thời để hiển thị ngay lập tức
+  // Tạo một bản sao tạm thời của tin nhắn để hiển thị ngay lập tức
   const tempMessage = {
     id: tempId,
     sessionId: currentSessionId,
@@ -979,14 +937,12 @@ function sendMessage() {
     timestamp: new Date().toISOString()
   };
 
+  // Xóa nội dung input ngay lập tức để cải thiện UX 
+  input.value = '';
+
   // Hiển thị tin nhắn tạm thời ngay lập tức
   appendMessage(tempMessage);
   scrollToBottom();
-
-  const token = localStorage.getItem('auth_token');
-
-  // Thêm logging
-  console.log(`Gửi tin nhắn đến phiên ${currentSessionId}: "${content}"`);
 
   fetch(`${API_BASE_URL}/support/message`, {
     method: 'POST',
@@ -1000,54 +956,31 @@ function sendMessage() {
     })
   })
   .then(response => {
-    // Lưu status code để xử lý lỗi chính xác
-    const statusCode = response.status;
-    console.log(`Nhận phản hồi từ server với mã trạng thái: ${statusCode}`);
-    
-    // Xử lý cả lỗi và thành công với detail
-    return response.json().then(data => {
-      return { 
-        ok: response.ok, 
-        status: statusCode,
-        data: data 
-      };
-    });
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to send message');
   })
-  .then(result => {
-    if (result.ok) {
-      console.log('Gửi tin nhắn thành công:', result.data);
+  .then(sentMessage => {
+    if (sentMessage && sentMessage.id) {
+      console.log(`Tin nhắn đã được gửi thành công với ID: ${sentMessage.id}`);
       
-      // Cập nhật tin nhắn tạm với ID thật
+      // Lưu mối quan hệ giữa ID thật và ID tạm
+      tempMessageMap.set(sentMessage.id, tempId);
+      
+      // Đánh dấu ID thật đã được xử lý
+      receivedMessageIds.add(sentMessage.id);
+      
+      // Cập nhật thuộc tính data-temp-ref của tin nhắn tạm trong DOM
       const tempElement = document.querySelector(`.message-item[data-message-id="${tempId}"]`);
       if (tempElement) {
-        tempElement.dataset.messageId = result.data.id;
-        // Thêm vào danh sách tin nhắn đã nhận để tránh hiển thị lại
-        receivedMessageIds.add(result.data.id);
-        console.log(`Đã cập nhật tin nhắn tạm ${tempId} thành tin nhắn thật ${result.data.id}`);
+        tempElement.dataset.tempRef = sentMessage.id;
       }
-      
-      // Xóa phần tử lỗi nếu có
-      const errorElement = document.querySelector('.message.system[data-error="send-error"]');
-      if (errorElement) {
-        errorElement.remove();
-      }
-    } else {
-      throw new Error(`Error ${result.status}: ${result.data.error || 'Unknown error'}`);
     }
   })
   .catch(error => {
-    console.error('Lỗi khi gửi tin nhắn:', error);
-    
-    // Xóa tin nhắn tạm
-    const tempElement = document.querySelector(`.message-item[data-message-id="${tempId}"]`);
-    if (tempElement) {
-      tempElement.remove();
-    }
-    
-    // Khôi phục nội dung input để người dùng không phải nhập lại
-    input.value = originalMessage;
-    
-    // Hiển thị thông báo lỗi
+    console.error('Error sending message:', error);
+    // Hiển thị thông báo lỗi nếu gửi thất bại
     const errorMessage = {
       id: 'error-' + Date.now(),
       sessionId: currentSessionId,
@@ -1055,34 +988,10 @@ function sendMessage() {
       content: 'Không thể gửi tin nhắn. Vui lòng thử lại.',
       timestamp: new Date().toISOString()
     };
-    
-    // Thêm thuộc tính để nhận dạng thông báo lỗi
-    const errorElement = document.createElement('div');
-    errorElement.className = 'message system message-item';
-    errorElement.setAttribute('data-error', 'send-error');
-    errorElement.innerHTML = `
-      <div class="content" style="color: #d32f2f;">Không thể gửi tin nhắn. Vui lòng thử lại.</div>
-      <div class="time">${formatTime(new Date())}</div>
-    `;
-    
-    const messagesContainer = document.getElementById('chat-messages');
-    if (messagesContainer) {
-      messagesContainer.appendChild(errorElement);
-      scrollToBottom();
-    }
+    appendMessage(errorMessage);
   })
   .finally(() => {
-    // Đặt lại trạng thái và giao diện
-    isSendingMessage = false;
-    
-    // Kích hoạt lại nút gửi
-    if (sendBtn) {
-      sendBtn.disabled = false;
-      sendBtn.innerHTML = 'Gửi';
-    }
-    
-    // Focus lại vào input
-    input.focus();
+    isSendingMessage = false; // Đặt lại trạng thái sau khi hoàn thành
   });
 }
 
@@ -1133,32 +1042,6 @@ function insertQuickResponse(text) {
   }
 }
 
-// Thêm mẫu trả lời vào khung chat
-function insertTemplate(templateType) {
-  let templateText = '';
-
-  switch (templateType) {
-    case 'technical':
-      templateText = 'Về vấn đề kỹ thuật của bạn, chúng tôi cần thêm thông tin sau để hỗ trợ tốt hơn: 1) Phiên bản phần mềm bạn đang sử dụng, 2) Các bước để tái hiện lỗi, 3) Thông báo lỗi cụ thể nếu có.';
-      break;
-    case 'pricing':
-      templateText = 'Về báo giá dịch vụ, chi phí sẽ phụ thuộc vào quy mô và yêu cầu cụ thể của dự án. Bạn có thể cho tôi biết thêm về nhu cầu của bạn để chúng tôi có thể cung cấp báo giá chi tiết hơn.';
-      break;
-    case 'timeline':
-      templateText = 'Thời gian hoàn thành dự án thường từ 4-6 tuần tùy thuộc vào quy mô và độ phức tạp. Chúng tôi sẽ cung cấp lộ trình chi tiết sau khi thảo luận kỹ hơn về yêu cầu của bạn.';
-      break;
-    case 'contact':
-      templateText = 'Bạn có thể liên hệ với chúng tôi qua email support@tectonicdevs.com hoặc số điện thoại 0903-123-456 trong giờ làm việc từ 8:00 đến 17:30, Thứ Hai đến Thứ Sáu.';
-      break;
-  }
-
-  const inputElement = document.getElementById('chat-input');
-  if (inputElement) {
-    inputElement.value = templateText;
-    inputElement.focus();
-  }
-}
-
 // Cập nhật thông tin phiên hiện tại
 function updateSessionInfo(sessionId) {
   const session = sessionList.find(s => s.id === sessionId);
@@ -1201,8 +1084,24 @@ function scrollToBottom() {
 
 // Hiển thị thông báo
 function showNotification(message) {
-  // Thay thế hàm cũ bằng hàm sendNotification
-  sendNotification('Thông báo mới', message);
+  // Sử dụng API Notification nếu được hỗ trợ
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      new Notification('Tectonic Devs Support', {
+        body: message,
+        icon: '/logo.png'
+      });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification('Tectonic Devs Support', {
+            body: message,
+            icon: '/logo.png'
+          });
+        }
+      });
+    }
+  }
 }
 
 // Hàm định dạng thời gian
@@ -1216,15 +1115,34 @@ function formatTime(date) {
 }
 
 function closeChatSession() {
-    currentSessionId = null;
-    // Ẩn giao diện chat
-    document.querySelector('.chat-interface').style.display = 'none';
-    document.querySelector('.no-session-selected').style.display = 'block';
-    // Đặt lại receivedMessageIds
-    receivedMessageIds = new Set();
-    // Làm sạch nội dung chat
-    document.getElementById('chat-messages').innerHTML = '';
-    document.getElementById('chat-input').value = '';
+  currentSessionId = null;
+  
+  // Đặt lại các biến theo dõi tin nhắn
+  receivedMessageIds.clear();
+  tempMessageMap.clear();
+  
+  // Hiển thị màn hình không có phiên được chọn
+  const chatContainer = document.getElementById('chat-container');
+  if (chatContainer) {
+    chatContainer.innerHTML = `
+      <div class="no-chat-selected">
+        <i class="fas fa-comments"></i>
+        <h3>Chưa có phiên chat nào được chọn</h3>
+        <p>Vui lòng chọn một phiên từ danh sách bên trái để bắt đầu cuộc hội thoại với khách hàng.</p>
+      </div>
+    `;
+  }
+  
+  // Bỏ chọn tất cả các phiên trong danh sách
+  document.querySelectorAll('.session-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Rời khỏi phòng chat socket nếu đang kết nối
+  if (socket && socket.previousSessionId) {
+    socket.emit('leave-room', socket.previousSessionId);
+    socket.previousSessionId = null;
+  }
 }
 
 // updateSessionsList function was missing from original code, adding a placeholder

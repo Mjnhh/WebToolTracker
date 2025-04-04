@@ -124,16 +124,13 @@ router.post("/message", isStaff, async (req: Request & { user?: any }, res: Resp
       return res.status(401).json({ error: "Unauthorized" });
     }
     
-    // Log để debug
-    console.log(`Staff ${staffId} sending message to session ${sessionId}: "${content}"`);
-    
-    // Kiểm tra session
+    // Kiểm tra session và quyền gửi tin nhắn
     const session = await storage.getChatSession(sessionId);
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
     
-    // Kiểm tra xem tin nhắn tương tự đã tồn tại gần đây không để tránh trùng lặp
+    // Kiểm tra xem tin nhắn tương tự đã tồn tại gần đây không
     const recentMessages = await storage.getChatMessages(sessionId);
     
     // Chỉ kiểm tra 10 tin nhắn gần nhất
@@ -149,6 +146,8 @@ router.post("/message", isStaff, async (req: Request & { user?: any }, res: Resp
       return res.status(200).json(duplicateMessage);
     }
     
+    // Bỏ qua kiểm tra assignedTo để cho phép bất kỳ nhân viên nào cũng có thể trả lời
+    
     // Lưu tin nhắn vào cơ sở dữ liệu
     const message = await storage.saveChatMessage({
       sessionId,
@@ -158,58 +157,15 @@ router.post("/message", isStaff, async (req: Request & { user?: any }, res: Resp
       metadata: JSON.stringify({ staffId })
     });
     
-    console.log(`Tin nhắn từ nhân viên đã được lưu với ID: ${message.id}`);
-    
-    try {
-      // Import hàm broadcast từ io.ts
-      const { broadcastMessageToSession } = require('../io');
-      
-      // Gửi tin nhắn đến tất cả clients
-      const success = broadcastMessageToSession(sessionId, message);
-      
-      if (success) {
-        console.log(`Tin nhắn ${message.id} đã được broadcast thành công đến phiên ${sessionId}`);
-      } else {
-        console.warn(`Không thể broadcast tin nhắn ${message.id} đến phiên ${sessionId}, nhưng tin nhắn đã được lưu`);
-      }
-    } catch (broadcastError) {
-      console.error(`Lỗi khi broadcast tin nhắn ${message.id}:`, broadcastError);
-      // Không trả về lỗi, vì tin nhắn đã được lưu thành công
+    // Gửi tin nhắn qua socket.io
+    if (io) {
+      io.to(sessionId).emit('new-message', message);
     }
     
-    // Cập nhật thông tin phiên để đánh dấu có tin nhắn mới
-    try {
-      let metadata = {};
-      if (session.metadata) {
-        try {
-          metadata = JSON.parse(session.metadata);
-        } catch (e) {
-          console.error('Error parsing session metadata:', e);
-        }
-      }
-      
-      // Cập nhật metadata của phiên
-      await storage.updateChatSession(sessionId, {
-        metadata: JSON.stringify({
-          ...metadata,
-          lastMessage: {
-            id: message.id,
-            content: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-            timestamp: new Date().toISOString()
-          },
-          lastStaffMessage: new Date().toISOString()
-        })
-      });
-    } catch (updateError) {
-      console.error('Error updating session metadata:', updateError);
-      // Vẫn trả về thành công vì tin nhắn đã được lưu và gửi
-    }
-    
-    // Trả về tin nhắn đã lưu
-    res.status(201).json(message);
+    res.json(message);
   } catch (error) {
     console.error('Error sending support message:', error);
-    res.status(500).json({ error: "Server error", details: error.message });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
