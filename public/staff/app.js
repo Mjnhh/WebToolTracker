@@ -694,12 +694,11 @@ function sendMessage() {
     timestamp: new Date().toISOString()
   };
   
-  // Hiển thị tin nhắn tạm thời
-  appendMessage(tempMessage);
-  scrollToBottom();
-  
-  // Xóa nội dung input ngay lập tức để cải thiện UX
+  // Xóa nội dung input ngay lập tức để cải thiện UX 
   input.value = '';
+  
+  // Không hiển thị tin nhắn tạm thời nữa, đợi tin nhắn thật từ server
+  scrollToBottom();
   
   fetch(`${API_BASE_URL}/support/message`, {
     method: 'POST',
