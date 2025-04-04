@@ -1,0 +1,45 @@
+/* Styles cho thông báo thành công */
+.success-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeInUp 0.5s ease;
+}
+
+.success-message i {
+    font-size: 1.2rem;
+}
+
+/* Styles cho thông báo lỗi */
+.error-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeInUp 0.5s ease;
+}
+
+.error-message i {
+    font-size: 1.2rem;
+}
+
+/* Animation cho thông báo */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

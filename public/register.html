@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký - Tectonic Devs</title>
+  <link rel="stylesheet" href="styles1.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .error-message {
+      color: #ff3e3e;
+      margin-top: 10px;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-image">
+      <object type="image/svg+xml" data="geometric-animation.svg" class="login-animation">
+        <img src="background.png" alt="Register Background" class="fallback-image">
+      </object>
+    </div>
+    <div class="auth-form">
+      <h2>Đăng Ký</h2>
+      <form id="register-form">
+          <div class="input-group">
+            <input type="text" id="name" name="name" placeholder="Họ và tên" required>
+          </div>
+          <div class="input-group">
+            <input type="text" id="username" name="username" placeholder="Tên đăng nhập" required>
+          </div>
+          <div class="input-group">
+            <input type="email" id="email" name="email" placeholder="Email" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="password" name="password" placeholder="Mật khẩu" required>
+          </div>
+          <div id="register-error" class="error-message">
+            <i class="fas fa-exclamation-circle"></i> 
+            <span>Lỗi đăng ký</span>
+          </div>
+          <button type="submit">Đăng Ký</button>
+      </form>
+      <p>Đã có tài khoản? <a href="login.html">Đăng nhập</a></p>
+    </div>
+  </div>
+  
+  <!-- Load auth.js script -->
+  <script src="auth.js"></script>
+</body>
+</html>

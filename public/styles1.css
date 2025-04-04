@@ -1,0 +1,217 @@
+/* Cài đặt nền tối với dark mode */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #121212;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Bố cục hai cột: bên trái là hình nền, bên phải là form */
+.auth-wrapper {
+    width: 80%;
+    max-width: 1000px;
+    height: 500px;
+    background: #1e1e1e;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Phần hình nền bên trái */
+.auth-image {
+    flex: 1;
+    display: none; /* Hiển thị ở màn hình lớn */
+    height: 100%; /* Đảm bảo chiếm toàn bộ chiều cao */
+    overflow: hidden; /* Tránh tràn nội dung */
+}
+.login-animation {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Đảm bảo SVG lấp đầy không gian */
+}
+
+.auth-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(80%) brightness(0.8);
+}
+
+/* Phần form bên phải */
+.auth-form {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgba(30, 30, 30, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+}
+
+/* Tiêu đề form */
+.auth-form h2 {
+    margin-bottom: 20px;
+    font-size: 2rem;
+    text-align: center;
+    color: #3498db;
+    text-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
+    letter-spacing: 2px;
+}
+
+/* Nhóm input */
+.input-group {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-bottom: 2px solid #444;
+    border-radius: 0;
+    background: transparent;
+    color: #fff;
+    transition: all 0.3s;   
+}
+
+.auth-form input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+/* Nút bấm */
+.auth-form button {
+    width: 107%;
+    padding: 15px;
+    color: #fff;
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    border-radius: 50px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    transform: perspective(1px) translateZ(0);
+    transition: color 0.3s;
+}
+.auth-form button:before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    transition: transform 0.3s ease-out;
+    border-radius: 50px;
+}
+.input-group {
+    position: relative;
+}
+
+.input-group label {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    color: #999;
+    transition: all 0.3s;
+    pointer-events: none;
+}
+
+.input-group input:focus + label,
+.input-group input:not(:placeholder-shown) + label {
+    top: -20px;
+    left: 0;
+    font-size: 12px;
+    color: #3498db;
+}
+    
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: url('background.png') no-repeat center center fixed; 
+    background-size: cover;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.auth-form button {
+    position: relative;
+    overflow: hidden;
+}
+.auth-form button:hover:before {
+    transform: scaleX(1);
+}
+.auth-form button:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%, -50%);
+    transform-origin: 50% 50%;
+}
+.auth-form button:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        opacity: 1;
+        transform: scale(0, 0);
+    }
+    20% {
+        transform: scale(25, 25);
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(40, 40);
+    }
+}
+.auth-form button:hover {
+    background: #2980b9;
+}
+
+/* Liên kết chuyển hướng */
+.auth-form p {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.auth-form p a {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.auth-form p a:hover {
+    background: #3498db;
+    color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #3498db, 0 0 25px #3498db, 0 0 50px #3498db, 0 0 100px #3498db;
+}
+
+/* Responsive: hiển thị hình nền bên trái ở màn hình từ 768px trở lên */
+@media (min-width: 768px) {
+    .auth-image {
+        display: block;
+    }
+}
+
