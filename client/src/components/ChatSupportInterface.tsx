@@ -50,11 +50,16 @@ const ChatSupportInterface: React.FC<ChatSupportInterfaceProps> = ({
 
   // Xử lý tin nhắn mới từ socket
   useEffect(() => {
-    if (!socket || !sessionId) return;
-
     const handleNewMessage = (data: Message) => {
       if (data.sessionId === sessionId) {
-        setMessages(prev => [...prev, data]);
+        // Kiểm tra xem tin nhắn đã tồn tại chưa
+        setMessages(prev => {
+          const messageExists = prev.some(msg => msg.id === data.id);
+          if (messageExists) {
+            return prev;
+          }
+          return [...prev, data];
+        });
       }
     };
 

@@ -67,9 +67,9 @@ router.post("/assign", isStaff, async (req: Request & { user?: any }, res: Respo
     }
 
     // Parse metadata
-    let sessionData = {};
+    let sessionData = {} as { assignedTo?: string | null };
     try {
-      sessionData = session.metadata ? JSON.parse(session.metadata) : {};
+      sessionData = session.metadata ? JSON.parse(session.metadata) : {} as { assignedTo?: string | null };
     } catch (e) {
       console.error('Error parsing session metadata:', e);
     }
@@ -138,7 +138,7 @@ router.post("/message", isStaff, async (req: Request & { user?: any }, res: Resp
     const duplicateMessage = lastMessages.find(m => 
       m.content === content && 
       m.sender === 'staff' && 
-      new Date().getTime() - new Date(m.timestamp).getTime() < 5000 // 5 giây
+      new Date().getTime() - (m.timestamp ? new Date(String(m.timestamp)).getTime() : 0) < 5000 // 5 giây
     );
     
     if (duplicateMessage) {
@@ -299,7 +299,7 @@ router.get("/sessions", isStaff, async (req: Request & { user?: any }, res: Resp
           if (
             message.sender === 'user' && 
             message.timestamp && 
-            new Date(message.timestamp).getTime() > lastReadTimestamp
+            new Date(typeof message.timestamp === 'string' ? message.timestamp : new Date()).getTime() > lastReadTimestamp
           ) {
             unreadCount++;
           }

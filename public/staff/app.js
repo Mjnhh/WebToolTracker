@@ -42,32 +42,51 @@ function initializeSocket() {
       return;
     }
     
-    // Kiểm tra xem tin nhắn đã hiển thị chưa
-    if (receivedMessageIds.has(message.id)) {
-      console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
-      return;
-    }
+    // 1. Kiểm tra xem tin nhắn này có phải là từ mình gửi đi không
+    const isSelfMessage = message.sender === 'staff';
     
-    // Tìm tin nhắn tạm thời tương ứng
+    // 2. Tìm tin nhắn tạm thời tương ứng
     const tempId = tempMessageMap.get(message.id);
     if (tempId) {
       // Tìm phần tử tạm trong DOM
       const tempElement = document.querySelector(`.message-item[data-message-id="${tempId}"]`);
       if (tempElement) {
-        console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, cập nhật ID`);
+        console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
+        // Cập nhật ID
         tempElement.dataset.messageId = message.id;
         delete tempElement.dataset.tempRef;
         
         // Đánh dấu tin nhắn đã được xử lý
         receivedMessageIds.add(message.id);
         
-        // Xóa khỏi map tạm
+        // Xóa khỏi map tạm thời
         tempMessageMap.delete(message.id);
         return;
       }
     }
     
-    // Nếu không tìm thấy phiên bản tạm, thêm tin nhắn mới
+    // 3. Kiểm tra xem tin nhắn đã hiển thị chưa
+    if (receivedMessageIds.has(message.id)) {
+      console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
+      return;
+    }
+    
+    // 4. Nếu là tin nhắn do mình gửi (staff) và không tìm thấy bản tạm, kiểm tra lần cuối
+    if (isSelfMessage) {
+      // Tìm tất cả tin nhắn của staff trong DOM để tránh trường hợp trùng lặp
+      const existingStaffMessages = document.querySelectorAll('.message.staff.message-item');
+      for (let msgElem of existingStaffMessages) {
+        // Kiểm tra nội dung và thời gian để tránh hiển thị trùng lặp
+        const contentElem = msgElem.querySelector('.content');
+        if (contentElem && contentElem.textContent === message.content) {
+          console.log(`Phát hiện tin nhắn staff trùng nội dung, bỏ qua: "${message.content}"`);
+          receivedMessageIds.add(message.id);
+          return;
+        }
+      }
+    }
+    
+    // 5. Nếu là tin nhắn mới thật sự, thêm vào màn hình
     receivedMessageIds.add(message.id);
     appendMessage(message);
     scrollToBottom();
@@ -814,62 +833,6 @@ function assignSession(sessionId) {
   });
 }
 
-// Hiển thị tin nhắn
-function renderMessages(messages) {
-  const messagesContainer = document.getElementById('chat-messages');
-  if (messagesContainer) {
-    // Tạo một Set để lưu trữ ID tin nhắn đã hiển thị
-    const displayedMessageIds = new Set();
-
-    // Lấy tất cả ID tin nhắn đã hiển thị trên UI
-    document.querySelectorAll('.message-item').forEach(el => {
-      if (el.dataset.messageId) {
-        displayedMessageIds.add(el.dataset.messageId);
-        console.log(`Phát hiện tin nhắn đã hiển thị: ${el.dataset.messageId}`);
-      }
-    });
-
-    // Tạo bản đồ để theo dõi tin nhắn đã thêm trong lần render này
-    const newMessageMap = new Map();
-
-    // Lọc tin nhắn trùng lặp trong danh sách từ API trước khi hiển thị
-    const uniqueMessages = messages.filter((message, index, self) => {
-      if (!message || !message.id) return false;
-
-      // Kiểm tra xem tin nhắn này đã tồn tại trong danh sách tin nhắn API không
-      const isDuplicate = self.findIndex(m => m && m.id === message.id) !== index;
-      if (isDuplicate) {
-        console.log(`Tin nhắn trùng lặp từ API: ${message.id} - "${message.content}"`);
-        return false;
-      }
-
-      return true;
-    });
-
-    console.log(`Có ${messages.length} tin nhắn từ API, sau khi lọc còn ${uniqueMessages.length} tin nhắn duy nhất`);
-
-    // Không xóa tin nhắn hiện tại, chỉ thêm tin nhắn mới và tránh trùng lặp
-    uniqueMessages.forEach(message => {
-      // Kiểm tra xem tin nhắn đã tồn tại trên UI chưa
-      if (message && message.id && typeof message.id === 'string') {
-        // Đã xử lý tin nhắn này trước đó hoặc đã thêm trong lần render này
-        if (displayedMessageIds.has(message.id) || newMessageMap.has(message.id)) {
-          console.log(`Tin nhắn có ID ${message.id} đã tồn tại, bỏ qua`);
-          return; // Bỏ qua nếu tin nhắn đã tồn tại
-        }
-
-        // Thêm ID vào danh sách đã xử lý và bản đồ tin nhắn mới
-        displayedMessageIds.add(message.id);
-        newMessageMap.set(message.id, message);
-        appendMessage(message);
-      } else {
-        // Tin nhắn không có ID, vẫn thêm vào
-        appendMessage(message);
-      }
-    });
-  }
-}
-
 // Thêm tin nhắn vào khung chat
 function appendMessage(message) {
   if (!message || !message.content) {
@@ -879,6 +842,20 @@ function appendMessage(message) {
   
   const messagesContainer = document.getElementById('chat-messages');
   if (!messagesContainer) return;
+  
+  // Kiểm tra lần cuối xem tin nhắn đã tồn tại trong DOM chưa
+  const existingMessage = document.querySelector(`.message-item[data-message-id="${message.id}"]`);
+  if (existingMessage) {
+    console.log(`Tin nhắn ID ${message.id} đã tồn tại trong DOM, bỏ qua`);
+    return;
+  }
+  
+  // Kiểm tra xem có tin nhắn tạm với temp-ref trỏ đến tin nhắn này không
+  const tempMessageElement = document.querySelector(`.message-item[data-temp-ref="${message.id}"]`);
+  if (tempMessageElement) {
+    console.log(`Tin nhắn ID ${message.id} đã có bản tạm thời hiển thị, bỏ qua`);
+    return;
+  }
 
   // Tạo phần tử tin nhắn mới
   const messageElement = document.createElement('div');
