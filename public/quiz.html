@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Kiến Thức Công Nghệ - Nhận Voucher!</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="quiz-style.css">
+    <style>
+        body {
+            padding-top: 0;
+        }
+        .back-to-site {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background-color: rgba(52, 152, 219, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .back-to-site:hover {
+            background-color: rgba(52, 152, 219, 1);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        .back-to-site i {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <a href="coding-team-website.html" class="back-to-site">
+        <i class="fas fa-arrow-left"></i> Quay lại trang chủ
+    </a>
+
+    <!-- Hero Section -->
+    <section class="quiz-hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="animated fadeInDown">Quiz Kiến Thức Công Nghệ</h1>
+                <h2 class="animated fadeIn">Thử thách trí tuệ, nhận quà hấp dẫn!</h2>
+                <p class="animated fadeInUp">Thử thách bản thân với bài quiz về công nghệ. Trả lời đúng đủ số câu hỏi để nhận voucher giảm giá đặc biệt cho dịch vụ của chúng tôi.</p>
+                <a href="#quiz-section" class="btn btn-primary animated fadeInUp">Bắt Đầu Ngay</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="quiz-section" class="quiz-container">
+        <div class="container">
+            <div class="section-header">
+                <div class="subtitle">Thử Thách Bản Thân</div>
+                <h2>Quiz Kiến Thức <span>Công Nghệ</span></h2>
+                <p>Trả lời đúng 10 câu hỏi để mở khóa voucher giảm giá đặc biệt!</p>
+            </div>
+
+            <div class="quiz-wrapper">
+                <!-- Quiz Welcome Screen -->
+                <div id="quiz-welcome" class="quiz-screen active">
+                    <div class="quiz-info">
+                        <div class="info-item">
+                            <i class="fas fa-question-circle"></i>
+                            <div>
+                                <h3>10 Câu Hỏi</h3>
+                                <p>Từ nhiều lĩnh vực công nghệ</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-trophy"></i>
+                            <div>
+                                <h3>Nhận Voucher</h3>
+                                <p>Cần đạt ít nhất 70% đúng</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <h3>Giới Hạn Thời Gian</h3>
+                                <p>5 phút để hoàn thành</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="start-quiz" class="btn btn-primary">Bắt Đầu Quiz</button>
+                </div>
+
+                <!-- Quiz Questions Screen -->
+                <div id="quiz-questions" class="quiz-screen">
+                    <div class="quiz-header">
+                        <div class="quiz-progress">
+                            <div class="progress-text">Câu hỏi <span id="current-question">1</span> / <span id="total-questions">10</span></div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div class="quiz-timer">
+                            <i class="fas fa-clock"></i>
+                            <span id="timer">5:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="question-container">
+                        <h3 id="question-text">Nội dung câu hỏi sẽ xuất hiện ở đây</h3>
+                        <div class="options-container">
+                            <!-- Các lựa chọn sẽ được thêm vào đây bằng JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="quiz-controls">
+                        <button id="prev-btn" class="btn btn-outline" disabled>Trước</button>
+                        <button id="next-btn" class="btn btn-primary">Tiếp</button>
+                        <button id="submit-btn" class="btn btn-primary" style="display: none;">Nộp Bài</button>
+                    </div>
+                </div>
+
+                <!-- Quiz Results Screen -->
+                <div id="quiz-results" class="quiz-screen">
+                    <div id="results-success" class="results-container">
+                        <div class="result-icon success">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <h2>Chúc Mừng!</h2>
+                        <p class="score-text">Bạn đã đạt <span id="final-score">0</span> trên 10 câu hỏi</p>
+                        <div class="voucher-container">
+                            <h3>Voucher Giảm Giá Của Bạn</h3>
+                            <div class="voucher">
+                                <div class="voucher-code" id="voucher-code">TECH25OFF</div>
+                                <button id="copy-voucher" class="copy-btn"><i class="fas fa-copy"></i></button>
+                            </div>
+                            <p class="voucher-info">Sử dụng mã này để được giảm 25% cho dịch vụ tiếp theo của chúng tôi!</p>
+                        </div>
+                        <div class="result-buttons">
+                            <button id="view-answers" class="btn btn-outline">Xem Lại Đáp Án</button>
+                            <button id="share-results" class="btn btn-primary">Chia Sẻ Kết Quả</button>
+                        </div>
+                    </div>
+                    
+                    <div id="results-failure" class="results-container" style="display: none;">
+                        <div class="result-icon failure">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <h2>Gần Đạt Rồi!</h2>
+                        <p class="score-text">Bạn đã đạt <span id="final-score-failure">0</span> trên 10 câu hỏi</p>
+                        <p class="encourage-text">Bạn cần đạt ít nhất 7 câu đúng để nhận voucher.</p>
+                        <div class="result-buttons">
+                            <button id="view-answers-failure" class="btn btn-outline">Xem Lại Đáp Án</button>
+                            <button id="retry-quiz" class="btn btn-primary">Thử Lại</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz Review Screen -->
+                <div id="quiz-review" class="quiz-screen">
+                    <h2>Đáp Án Của Bạn</h2>
+                    <div class="review-container">
+                        <!-- Nội dung xem lại sẽ được thêm vào đây bằng JavaScript -->
+                    </div>
+                    <button id="back-to-results" class="btn btn-primary">Quay Lại Kết Quả</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="quiz.js"></script>
+</body>
+</html> 

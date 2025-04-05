@@ -1,0 +1,102 @@
+{
+  "vouchers": [
+    {
+      "id": "7abcd162-9b3b-4e9f-b49b-2489dbb8d069",
+      "createdAt": "2025-04-05T15:18:45.586Z",
+      "code": "TECHCBXLC3",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 9,
+      "usedAt": "2025-04-05T16:10:19.156Z"
+    },
+    {
+      "id": "1243dffc-a750-4172-9d55-978d2a2bc462",
+      "createdAt": "2025-04-05T15:22:57.007Z",
+      "code": "TECHK8HFDY",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:10:23.365Z"
+    },
+    {
+      "id": "3bcb8916-4a13-411c-8019-5993505ae430",
+      "createdAt": "2025-04-05T15:34:40.857Z",
+      "code": "TECHKKZES2",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:10:23.660Z"
+    },
+    {
+      "id": "f694be60-0040-447a-994e-ecc9ef8bbb4e",
+      "createdAt": "2025-04-05T15:42:56.582Z",
+      "code": "TECHJ8GVRD",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 9,
+      "usedAt": "2025-04-05T16:10:24.179Z"
+    },
+    {
+      "id": "5fbf2eb4-6331-4f4f-ae14-0f3b906a20fb",
+      "createdAt": "2025-04-05T15:50:05.451Z",
+      "code": "TECHRF4U7V",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:10:24.436Z"
+    },
+    {
+      "id": "4d1acb04-c38a-4c3e-bab6-1f3d21a6c804",
+      "createdAt": "2025-04-05T16:00:36.381Z",
+      "code": "TECHG3WPGG",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:10:24.712Z"
+    },
+    {
+      "id": "ca4792c1-91ea-4c68-82a8-96e8b81275cf",
+      "createdAt": "2025-04-05T16:05:43.737Z",
+      "code": "TECHFPRJHQ",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 8,
+      "usedAt": "2025-04-05T16:10:25.581Z"
+    },
+    {
+      "id": "1aeae47f-4cf1-4adb-bfb7-af30b7b92def",
+      "createdAt": "2025-04-05T16:10:54.467Z",
+      "code": "TECHDBEDN5",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:27:14.524Z"
+    },
+    {
+      "id": "0ccdece2-1e01-44c0-9743-52d39f01771d",
+      "createdAt": "2025-04-05T16:27:33.211Z",
+      "code": "TECHVP5C2D",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 10,
+      "usedAt": "2025-04-05T16:39:34.119Z"
+    },
+    {
+      "id": "bfdd6a55-c4d9-4a57-8e74-0119b8b11bbd",
+      "createdAt": "2025-04-05T17:03:48.386Z",
+      "code": "TECHLMWSCM",
+      "discount": 25,
+      "isUsed": true,
+      "quizScore": 8,
+      "usedAt": "2025-04-05T17:08:51.170Z"
+    },
+    {
+      "id": "f83e63b6-09b7-4057-9034-b6a8e98ba6f6",
+      "createdAt": "2025-04-05T17:09:23.089Z",
+      "code": "TECHFVFJ26",
+      "discount": 25,
+      "isUsed": false,
+      "quizScore": 8
+    }
+  ]
+}

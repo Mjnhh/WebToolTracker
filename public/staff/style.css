@@ -36,6 +36,7 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   height: 100vh;
+  margin: 0;
   overflow: hidden;
 }
 
@@ -207,6 +208,13 @@ body {
   position: relative;
   overflow: hidden;
   font-weight: 500;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.menu-item:hover {
+  text-decoration: none;
+  color: var(--text-primary);
 }
 
 .menu-item:before {
@@ -219,10 +227,6 @@ body {
   background: var(--background-gradient);
   opacity: 0.1;
   transition: var(--transition);
-}
-
-.menu-item:hover:before {
-  width: 100%;
 }
 
 .menu-item.active {
@@ -842,12 +846,14 @@ body {
 .content-section {
   display: none;
   height: 100%;
+  overflow: hidden;
 }
 
 .content-section.active {
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: hidden;
 }
 
 /* Dark mode */
@@ -1791,4 +1797,386 @@ body.dark-mode #volume-slider {
   .spotify-player {
     display: none;
   }
+}
+
+/* Styles for Voucher Verification */
+#vouchers-section {
+  overflow: auto;
+  height: 100%;
+  padding-bottom: 20px;
+}
+
+.vouchers-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0 1rem 2rem;
+  flex: 1;
+}
+
+.verify-voucher-container {
+  background-color: var(--background-white);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.verify-voucher-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: var(--background-gradient);
+}
+
+.verify-voucher-container h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
+#voucher-code {
+  padding: 0.875rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-light);
+  color: var(--text-primary);
+  font-size: 1rem;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+#voucher-code:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.vouchers-list-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-white);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.vouchers-list-container h3 {
+  margin: 0;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vouchers-list-container h3::before {
+  content: '\f02b';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.vouchers-table-container {
+  overflow-y: visible;
+  padding: 0.5rem;
+}
+
+.vouchers-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+.vouchers-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  padding: 1rem 1.5rem;
+  text-align: left;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.vouchers-table th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.vouchers-table th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.vouchers-table tr {
+  transition: all 0.2s ease;
+}
+
+.vouchers-table tr:nth-child(even) {
+  background-color: rgba(99, 102, 241, 0.03);
+}
+
+.vouchers-table tr:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.vouchers-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.vouchers-table code {
+  padding: 5px 8px;
+  background-color: var(--background-light);
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9rem;
+  color: var(--primary-color);
+  letter-spacing: 0.5px;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+.used-voucher {
+  opacity: 0.7;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.text-danger {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.text-success {
+  color: #38a169;
+  font-weight: 600;
+}
+
+/* Nút kiểm tra voucher */
+.btn-primary {
+  background: var(--background-gradient);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Nút đánh dấu đã dùng */
+.btn-mark-used {
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--primary-color);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-mark-used:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Badge đã sử dụng */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.bg-secondary {
+  background-color: #4b5563;
+  color: white;
+}
+
+/* Kết quả kiểm tra voucher */
+.voucher-result {
+  margin-top: 1.75rem;
+  border-radius: 12px;
+  background-color: rgba(99, 102, 241, 0.02);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.voucher-status {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--background-gradient);
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.voucher-info {
+  padding: 1.5rem;
+}
+
+.voucher-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.voucher-details p {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.voucher-details p strong {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.voucher-details p span {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.voucher-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(56, 161, 105, 0.3);
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
+}
+
+/* Nút làm mới */
+#refresh-vouchers {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#refresh-vouchers:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+}
+
+#refresh-vouchers i {
+  transition: transform 0.5s ease;
+}
+
+#refresh-vouchers:hover i {
+  transform: rotate(180deg);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.action-button i {
+  transition: transform 0.5s ease;
+}
+
+.action-button:hover i {
+  transform: rotate(180deg);
 }

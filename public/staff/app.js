@@ -2545,6 +2545,10 @@ function init() {
       
       // Thiết lập riêng nút kết nối Spotify
       setupSpotifyConnectButton();
+      
+      // Khởi tạo tính năng voucher
+      console.log("Calling initVoucherFunctions from init()");
+      setTimeout(initVoucherFunctions, 1000); // Thêm timeout để đảm bảo DOM đã load
     })
     .catch(error => {
       console.error('Lỗi xác thực:', error);
@@ -2834,4 +2838,570 @@ function setupSpotifyConnectButton() {
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM đã tải xong, thiết lập nút Spotify');
   setupSpotifyConnectButton();
+});
+
+// Hàm khởi tạo tab cho giao diện
+function setupTabs() {
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('.content-section');
+  
+  navLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Xóa active class từ tất cả các link
+      navLinks.forEach(l => l.classList.remove('active'));
+      
+      // Thêm active class cho link được chọn
+      this.classList.add('active');
+      
+      // Ẩn tất cả các phần nội dung
+      sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+      });
+      
+      // Hiển thị phần được chọn
+      const targetId = this.getAttribute('data-section') + '-section';
+      const targetSection = document.getElementById(targetId);
+      if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+        
+        // Thực hiện hành động đặc biệt dựa trên tab
+        if (targetId === 'statistics-section') {
+          fetchStats();
+        } else if (targetId === 'vouchers-section') {
+          loadVouchersList();
+        }
+      }
+    });
+  });
+  
+  // Mặc định hiển thị dashboard
+  const dashboardLink = document.querySelector('.nav-link[data-section="dashboard"]');
+  if (dashboardLink) {
+    dashboardLink.click();
+  }
+}
+
+// Tạo nội dung cho tab Voucher Verification
+function createVouchersContent() {
+  const vouchersContainer = document.createElement('div');
+  vouchersContainer.className = 'vouchers-container';
+  
+  // Form kiểm tra mã voucher
+  const verifyContainer = document.createElement('div');
+  verifyContainer.className = 'verify-voucher-container';
+  
+  const verifyTitle = document.createElement('h3');
+  verifyTitle.textContent = 'Kiểm tra mã voucher';
+  verifyContainer.appendChild(verifyTitle);
+  
+  const verifyForm = document.createElement('form');
+  verifyForm.id = 'verify-voucher-form';
+  verifyForm.innerHTML = `
+    <div class="form-group">
+      <label for="voucher-code">Mã Voucher:</label>
+      <div class="input-with-button">
+        <input type="text" id="voucher-code" placeholder="Nhập mã voucher cần kiểm tra" required>
+        <button type="submit" class="btn btn-primary">Kiểm tra</button>
+      </div>
+    </div>
+  `;
+  verifyContainer.appendChild(verifyForm);
+  
+  // Kết quả kiểm tra
+  const resultContainer = document.createElement('div');
+  resultContainer.className = 'voucher-result';
+  resultContainer.id = 'voucher-result';
+  resultContainer.style.display = 'none';
+  
+  // Kết quả chi tiết
+  const voucherInfo = document.createElement('div');
+  voucherInfo.className = 'voucher-info';
+  voucherInfo.innerHTML = `
+    <div class="voucher-status">
+      <span class="status-indicator"></span>
+      <span class="status-text"></span>
+    </div>
+    <div class="voucher-details">
+      <p><strong>Mã giảm giá:</strong> <span id="result-discount">0</span>%</p>
+      <p><strong>Ngày tạo:</strong> <span id="result-created"></span></p>
+      <p><strong>Trạng thái:</strong> <span id="result-used"></span></p>
+      <p><strong>Điểm Quiz:</strong> <span id="result-score"></span></p>
+    </div>
+    <div class="voucher-actions">
+      <button id="use-voucher" class="btn btn-success">Sử dụng Voucher</button>
+    </div>
+  `;
+  resultContainer.appendChild(voucherInfo);
+}
+
+// Load danh sách voucher
+function loadVouchersList() {
+  const vouchersList = document.getElementById('vouchers-list');
+  if (!vouchersList) return;
+  
+  // Hiển thị loading
+  vouchersList.innerHTML = `
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Đang tải danh sách voucher...</p>
+    </div>
+  `;
+  
+  // Gọi API lấy danh sách voucher - bỏ header xác thực
+  fetch('/api/vouchers/list')
+    .then(response => response.json())
+    .then(vouchers => {
+      if (vouchers.length === 0) {
+        vouchersList.innerHTML = '<p class="no-data">Chưa có voucher nào.</p>';
+        return;
+      }
+      
+      // Sắp xếp voucher theo thời gian tạo, mới nhất lên đầu
+      vouchers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Tạo bảng
+      const table = document.createElement('table');
+      table.className = 'vouchers-table';
+      
+      // Tạo header
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th>Mã</th>
+          <th>Giảm giá</th>
+          <th>Đã sử dụng</th>
+          <th>Ngày tạo</th>
+          <th>Điểm Quiz</th>
+          <th>Thao tác</th>
+        </tr>
+      `;
+      table.appendChild(thead);
+      
+      // Tạo body
+      const tbody = document.createElement('tbody');
+      
+      vouchers.forEach(voucher => {
+        const tr = document.createElement('tr');
+        
+        // Màu nền dựa trên trạng thái
+        if (voucher.isUsed) {
+          tr.classList.add('used-voucher');
+        }
+        
+        // Tạo các cột
+        tr.innerHTML = `
+          <td>${voucher.code}</td>
+          <td>${voucher.discount}%</td>
+          <td>${voucher.isUsed ? '<span class="status-badge status-used">Đã sử dụng</span>' : '<span class="status-badge status-active">Chưa sử dụng</span>'}</td>
+          <td>${new Date(voucher.createdAt).toLocaleString()}</td>
+          <td>${voucher.quizScore || 'N/A'}</td>
+          <td>
+            <button class="btn btn-sm ${voucher.isUsed ? 'btn-disabled' : 'btn-success'} verify-btn" 
+                data-code="${voucher.code}" 
+                ${voucher.isUsed ? 'disabled' : ''}>
+                ${voucher.isUsed ? 'Đã sử dụng' : 'Kiểm tra'}
+            </button>
+          </td>
+        `;
+        
+        tbody.appendChild(tr);
+      });
+      
+      table.appendChild(tbody);
+      
+      // Xóa nội dung cũ và thêm bảng
+      vouchersList.innerHTML = '';
+      vouchersList.appendChild(table);
+      
+      // Thêm event listener cho các nút kiểm tra
+      const verifyButtons = vouchersList.querySelectorAll('.verify-btn');
+      verifyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const code = this.dataset.code;
+          document.getElementById('voucher-code').value = code;
+          verifyVoucher(code);
+          
+          // Cuộn lên trên để xem kết quả
+          document.getElementById('vouchers-section').scrollTop = 0;
+        });
+      });
+    })
+    .catch(error => {
+      console.error('Error loading vouchers:', error);
+      vouchersList.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Lỗi khi tải danh sách voucher: ${error.message}</p>
+        </div>
+      `;
+    });
+}
+
+// Kiểm tra voucher
+function verifyVoucher(code) {
+  const resultContainer = document.getElementById('voucher-result');
+  const statusIndicator = resultContainer.querySelector('.status-indicator');
+  const statusText = resultContainer.querySelector('.status-text');
+  
+  // Hiển thị loading
+  resultContainer.style.display = 'block';
+  statusIndicator.className = 'status-indicator loading';
+  statusText.textContent = 'Đang kiểm tra...';
+  
+  // Gọi API kiểm tra
+  fetch(`/api/vouchers/check/${code}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.valid) {
+        // Voucher hợp lệ
+        statusIndicator.className = 'status-indicator valid';
+        statusText.textContent = 'Mã voucher hợp lệ';
+        
+        // Load thông tin chi tiết
+        fetch(`/api/vouchers/list`)
+          .then(response => response.json())
+          .then(vouchers => {
+            const voucher = vouchers.find(v => v.code === code);
+            if (voucher) {
+              document.getElementById('result-discount').textContent = voucher.discount;
+              document.getElementById('result-created').textContent = new Date(voucher.createdAt).toLocaleString();
+              document.getElementById('result-used').textContent = voucher.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng';
+              document.getElementById('result-score').textContent = voucher.quizScore || 'N/A';
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching voucher details:', error);
+          });
+      } else {
+        // Voucher không hợp lệ
+        statusIndicator.className = 'status-indicator invalid';
+        statusText.textContent = data.error || 'Mã voucher không hợp lệ';
+      }
+    })
+    .catch(error => {
+      console.error('Error verifying voucher:', error);
+      statusIndicator.className = 'status-indicator error';
+      statusText.textContent = 'Lỗi khi kiểm tra mã voucher';
+    });
+}
+
+// Khởi tạo tính năng voucher
+function initVoucherFunctions() {
+  console.log("Initializing voucher functions");
+  
+  // Lấy form verify voucher
+  const verifyForm = document.getElementById('verify-voucher-form');
+  if (verifyForm) {
+    console.log("Found verify form, adding submit event");
+    verifyForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const code = document.getElementById('voucher-code').value.trim();
+      if (code) {
+        checkVoucherCode(code);
+      } else {
+        showNotification('Vui lòng nhập mã voucher để kiểm tra', 'error');
+      }
+    });
+  } else {
+    console.log("Verify form not found!");
+  }
+  
+  // Tải danh sách voucher
+  fetchVouchers();
+}
+
+// Tải danh sách vouchers từ server
+function fetchVouchers() {
+  console.log("Fetching vouchers list...");
+  const vouchersListContainer = document.getElementById('vouchers-list');
+  
+  if (!vouchersListContainer) {
+    console.error('Không tìm thấy container danh sách voucher');
+    return;
+  }
+  
+  // Hiển thị trạng thái đang tải
+  vouchersListContainer.innerHTML = `
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Đang tải danh sách voucher...</p>
+    </div>
+  `;
+  
+  // Gọi API lấy danh sách voucher
+  fetch('/api/vouchers/list', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Không thể tải danh sách voucher');
+    }
+    return response.json();
+  })
+  .then(vouchers => {
+    console.log('Received vouchers:', vouchers);
+    
+    if (!vouchers || vouchers.length === 0) {
+      vouchersListContainer.innerHTML = `
+        <div class="no-data">
+          <p>Chưa có voucher nào được tạo</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Sắp xếp vouchers theo thời gian tạo mới nhất lên đầu
+    vouchers.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB.getTime() - dateA.getTime(); // Sắp xếp giảm dần (mới nhất lên đầu)
+    });
+    
+    // Tạo bảng danh sách voucher
+    let tableHTML = `
+      <div class="vouchers-table-container">
+        <table class="vouchers-table">
+          <thead>
+            <tr>
+              <th>Mã voucher</th>
+              <th>Giảm giá</th>
+              <th>Ngày tạo</th>
+              <th>Điểm Quiz</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    vouchers.forEach(voucher => {
+      // Định dạng ngày tạo
+      const createdDate = voucher.createdAt ? new Date(voucher.createdAt) : null;
+      const formattedDate = createdDate ? 
+        `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${createdDate.getMinutes()}` : 
+        'N/A';
+      
+      // Định dạng trạng thái
+      const statusClass = voucher.isUsed ? 'text-danger' : 'text-success';
+      const statusText = voucher.isUsed ? 'Đã sử dụng' : 'Khả dụng';
+      
+      // Định dạng điểm quiz
+      const quizScore = voucher.quizScore != null ? voucher.quizScore : 'N/A';
+      
+      // Tạo button hành động
+      const actionButton = voucher.isUsed 
+        ? '<span class="badge bg-secondary">Đã sử dụng</span>' 
+        : `<button class="btn-mark-used" data-code="${voucher.code}">Đánh dấu đã dùng</button>`;
+      
+      tableHTML += `
+        <tr class="${voucher.isUsed ? 'used-voucher' : ''}">
+          <td><code>${voucher.code}</code></td>
+          <td>${voucher.discount || 0}%</td>
+          <td>${formattedDate}</td>
+          <td>${quizScore}</td>
+          <td class="${statusClass}">${statusText}</td>
+          <td>${actionButton}</td>
+        </tr>
+      `;
+    });
+    
+    tableHTML += `
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    vouchersListContainer.innerHTML = tableHTML;
+    
+    // Thêm event listener cho các button đánh dấu đã sử dụng
+    document.querySelectorAll('.btn-mark-used').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.getAttribute('data-code');
+        if (code) {
+          markVoucherAsUsed(code);
+        }
+      });
+    });
+  })
+  .catch(error => {
+    console.error('Lỗi khi tải danh sách voucher:', error);
+    vouchersListContainer.innerHTML = `
+      <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Không thể tải danh sách voucher</p>
+        <p class="error-detail">${error.message}</p>
+        <button class="btn btn-primary" onclick="fetchVouchers()">Thử lại</button>
+      </div>
+    `;
+  });
+}
+
+// Kiểm tra mã voucher
+function checkVoucherCode(code) {
+  console.log("Checking voucher code:", code);
+  
+  // Hiển thị trạng thái đang tải
+  const resultElement = document.getElementById('voucher-result');
+  if (resultElement) {
+    resultElement.style.display = 'block';
+    
+    const statusIndicator = resultElement.querySelector('.status-indicator');
+    const statusText = resultElement.querySelector('.status-text');
+    
+    if (statusIndicator && statusText) {
+      statusIndicator.className = 'status-indicator loading';
+      statusText.textContent = 'Đang kiểm tra...';
+    }
+    
+    // Ẩn nút sử dụng voucher trong quá trình kiểm tra
+    const useVoucherBtn = document.getElementById('use-voucher');
+    if (useVoucherBtn) {
+      useVoucherBtn.style.display = 'none';
+    }
+  }
+  
+  // Gọi API kiểm tra voucher
+  fetch(`/api/vouchers/check/${code}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Mã voucher không hợp lệ');
+    }
+    return response.json();
+  })
+  .then(voucher => {
+    console.log("Voucher details:", voucher);
+    updateVoucherResult(voucher, true);
+  })
+  .catch(error => {
+    console.error('Lỗi khi kiểm tra voucher:', error);
+    updateVoucherResult(null, false);
+    showNotification('Không tìm thấy mã voucher hoặc mã không hợp lệ', 'error');
+  });
+}
+
+// Cập nhật kết quả kiểm tra voucher
+function updateVoucherResult(voucher, isValid) {
+  const resultElement = document.getElementById('voucher-result');
+  if (!resultElement) return;
+  
+  const statusIndicator = resultElement.querySelector('.status-indicator');
+  const statusText = resultElement.querySelector('.status-text');
+  const discountElement = document.getElementById('result-discount');
+  const createdElement = document.getElementById('result-created');
+  const usedElement = document.getElementById('result-used');
+  const scoreElement = document.getElementById('result-score');
+  const useVoucherBtn = document.getElementById('use-voucher');
+  
+  if (isValid && voucher) {
+    // Voucher hợp lệ
+    statusIndicator.className = 'status-indicator valid';
+    statusText.textContent = 'Voucher hợp lệ';
+    
+    // Hiển thị thông tin voucher
+    discountElement.textContent = voucher.discount || 0;
+    
+    // Định dạng ngày tạo
+    if (voucher.createdAt) {
+      const createdDate = new Date(voucher.createdAt);
+      createdElement.textContent = `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${createdDate.getMinutes()}`;
+    } else {
+      createdElement.textContent = 'N/A';
+    }
+    
+    // Hiển thị trạng thái sử dụng
+    usedElement.textContent = voucher.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng';
+    usedElement.className = voucher.isUsed ? 'text-danger' : 'text-success';
+    
+    // Hiển thị điểm quiz
+    scoreElement.textContent = voucher.quizScore != null ? voucher.quizScore : 'N/A';
+    
+    // Hiển thị hoặc ẩn nút sử dụng voucher tùy theo trạng thái
+    if (useVoucherBtn) {
+      if (voucher.isUsed) {
+        useVoucherBtn.style.display = 'none';
+      } else {
+        useVoucherBtn.style.display = 'block';
+        useVoucherBtn.setAttribute('data-code', voucher.code);
+      }
+    }
+  } else {
+    // Voucher không hợp lệ
+    statusIndicator.className = 'status-indicator invalid';
+    statusText.textContent = 'Voucher không hợp lệ';
+    
+    // Reset các thông tin
+    discountElement.textContent = '0';
+    createdElement.textContent = '-';
+    usedElement.textContent = '-';
+    scoreElement.textContent = '-';
+    
+    // Ẩn nút sử dụng voucher
+    if (useVoucherBtn) {
+      useVoucherBtn.style.display = 'none';
+    }
+  }
+}
+
+// Đánh dấu voucher đã sử dụng
+function markVoucherAsUsed(code) {
+  fetch(`/api/vouchers/use/${code}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Không thể đánh dấu voucher');
+    }
+    return response.json();
+  })
+  .then(data => {
+    showNotification('Đã đánh dấu voucher như đã sử dụng', 'success');
+    
+    // Cập nhật lại trạng thái trên giao diện
+    const useVoucherBtn = document.getElementById('use-voucher');
+    if (useVoucherBtn) {
+      useVoucherBtn.style.display = 'none';
+    }
+    
+    const usedElement = document.getElementById('result-used');
+    if (usedElement) {
+      usedElement.textContent = 'Đã sử dụng';
+      usedElement.className = 'text-danger';
+    }
+    
+    // Tải lại danh sách voucher
+    fetchVouchers();
+  })
+  .catch(error => {
+    console.error('Lỗi khi đánh dấu voucher:', error);
+    showNotification('Không thể đánh dấu voucher đã sử dụng', 'error');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Truy cập nút làm mới voucher
+  const refreshVouchersBtn = document.getElementById('refresh-vouchers');
+  if (refreshVouchersBtn) {
+    refreshVouchersBtn.addEventListener('click', function() {
+      console.log('Refreshing vouchers list...');
+      fetchVouchers();
+    });
+  }
+  
+  // ... other DOMContentLoaded handlers ...
 });

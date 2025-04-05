@@ -4,6 +4,7 @@ import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
 import bcrypt from "bcryptjs";
 import crypto from 'crypto';
+import { db } from './db';
 
 export interface IStorage {
   // User operations
@@ -51,6 +52,18 @@ export interface IStorage {
   getAllChatSessions(): Promise<ChatSession[]>;
 
   getUserById(id: number): Promise<User | undefined>;
+}
+
+export interface Voucher {
+  id: string;
+  code: string;
+  discount: number;
+  isUsed: boolean;
+  createdAt: Date;
+  usedAt?: Date;
+  userId?: string;
+  userEmail?: string;
+  quizScore?: number;
 }
 
 export class MemStorage implements IStorage {
@@ -622,7 +635,7 @@ export class MemStorage implements IStorage {
 Tôi có thể giúp bạn với các vấn đề:
 
 🌐 Tư vấn về dịch vụ thiết kế website
-�� Tư vấn về công nghệ và giải pháp 
+💻 Tư vấn về công nghệ và giải pháp 
 💰 Báo giá và thời gian thực hiện
 📋 Thông tin về quy trình làm việc
 🛠️ Hỗ trợ kỹ thuật
@@ -791,3 +804,55 @@ Bạn cần hỗ trợ vấn đề gì ạ? 😊`,
 
 const storage = new MemStorage();
 export { storage };
+
+export async function saveVoucher(voucherData: Omit<Voucher, 'id' | 'createdAt'>): Promise<Voucher> {
+  const id = crypto.randomUUID();
+  const createdAt = new Date();
+  
+  const voucher: Voucher = {
+    id,
+    createdAt,
+    ...voucherData
+  };
+  
+  // Lưu voucher vào cơ sở dữ liệu
+  await db.write(async (data: any) => {
+    if (!data.vouchers) {
+      data.vouchers = [];
+    }
+    data.vouchers.push(voucher);
+  });
+  
+  return voucher;
+}
+
+export async function getVoucherByCode(code: string): Promise<Voucher | null> {
+  const data = await db.read();
+  if (!data.vouchers) return null;
+  
+  const voucher = data.vouchers.find((v: any) => v.code === code);
+  return voucher || null;
+}
+
+export async function markVoucherAsUsed(code: string): Promise<Voucher | null> {
+  let updatedVoucher: Voucher | null = null;
+  
+  await db.write(async (data: any) => {
+    if (!data.vouchers) return;
+    
+    const voucherIndex = data.vouchers.findIndex((v: any) => v.code === code);
+    if (voucherIndex === -1) return;
+    
+    data.vouchers[voucherIndex].isUsed = true;
+    data.vouchers[voucherIndex].usedAt = new Date();
+    
+    updatedVoucher = data.vouchers[voucherIndex];
+  });
+  
+  return updatedVoucher;
+}
+
+export async function getAllVouchers(): Promise<Voucher[]> {
+  const data = await db.read();
+  return data.vouchers || [];
+}

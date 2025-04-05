@@ -36,22 +36,26 @@
             </div>
 
             <div class="sidebar-menu">
-                <div class="menu-item active" data-section="chat">
+                <a href="#" class="menu-item active" data-section="chat">
                     <i class="fas fa-comments"></i>
                     <span>Hội thoại</span>
-                </div>
-                <div class="menu-item" data-section="stats">
+                </a>
+                <a href="#" class="menu-item" data-section="stats">
                     <i class="fas fa-chart-line"></i>
                     <span>Thống kê</span>
-                </div>
-                <div class="menu-item" data-section="templates">
+                </a>
+                <a href="#" class="menu-item" data-section="templates">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Mẫu câu</span>
-                </div>
-                <div class="menu-item" data-section="settings">
+                </a>
+                <a href="#" class="menu-item" data-section="vouchers">
+                    <i class="fas fa-tags"></i>
+                    <span>Vouchers</span>
+                </a>
+                <a href="#" class="menu-item" data-section="settings">
                     <i class="fas fa-cog"></i>
                     <span>Cài đặt</span>
-                </div>
+                </a>
             </div>
 
             <div class="sidebar-footer">
@@ -383,10 +387,165 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- Phần vouchers -->
+            <section id="vouchers-section" class="content-section">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h2>Quản lý Voucher</h2>
+                        <p class="subtitle">Kiểm tra và xác minh mã giảm giá</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="refresh-vouchers" class="action-button">
+                            <i class="fas fa-sync-alt"></i> Làm mới
+                        </button>
+                    </div>
+                </header>
+
+                <div class="vouchers-container">
+                    <div class="verify-voucher-container">
+                        <h3>Kiểm tra mã voucher</h3>
+                        <form id="verify-voucher-form">
+                            <div class="form-group">
+                                <label for="voucher-code">Mã Voucher:</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="voucher-code" placeholder="Nhập mã voucher cần kiểm tra" required>
+                                    <button type="submit" class="btn btn-primary">Kiểm tra</button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <div class="voucher-result" id="voucher-result" style="display: none;">
+                            <div class="voucher-info">
+                                <div class="voucher-status">
+                                    <span class="status-indicator"></span>
+                                    <span class="status-text"></span>
+                                </div>
+                                <div class="voucher-details">
+                                    <p><strong>Mã giảm giá:</strong> <span id="result-discount">0</span>%</p>
+                                    <p><strong>Ngày tạo:</strong> <span id="result-created"></span></p>
+                                    <p><strong>Trạng thái:</strong> <span id="result-used"></span></p>
+                                    <p><strong>Điểm Quiz:</strong> <span id="result-score"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="vouchers-list-container">
+                        <h3>Danh sách voucher gần đây</h3>
+                        <div class="vouchers-list" id="vouchers-list">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Đang tải danh sách voucher...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hàm hiển thị thông báo
+            window.showNotification = function(message, type) {
+                console.log('Showing notification:', message, type);
+                const notificationContainer = document.createElement('div');
+                notificationContainer.className = 'notification-toast ' + (type || 'info');
+                
+                notificationContainer.innerHTML = `
+                    <div class="notification-content">
+                        <i class="notification-icon fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                        <span id="notification-message">${message}</span>
+                    </div>
+                    <button class="close-notification">&times;</button>
+                `;
+                
+                document.body.appendChild(notificationContainer);
+                
+                // Xử lý nút đóng
+                const closeButton = notificationContainer.querySelector('.close-notification');
+                if (closeButton) {
+                    closeButton.addEventListener('click', function() {
+                        notificationContainer.remove();
+                    });
+                }
+                
+                // Tự động đóng sau 5 giây
+                setTimeout(function() {
+                    if (notificationContainer.parentNode) {
+                        notificationContainer.remove();
+                    }
+                }, 5000);
+            };
+            
+            // Xử lý click menu
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Ngăn chặn hành vi mặc định của thẻ a
+                    e.preventDefault();
+                    
+                    // Loại bỏ class active từ tất cả các menu items
+                    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                    
+                    // Thêm class active cho item được click
+                    this.classList.add('active');
+                    
+                    // Lấy section tương ứng
+                    const sectionId = this.getAttribute('data-section');
+                    
+                    // Ẩn tất cả các sections
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        section.style.display = 'none';
+                        section.classList.remove('active');
+                    });
+                    
+                    // Hiển thị section được chọn
+                    const targetSection = document.getElementById(sectionId + '-section');
+                    if (targetSection) {
+                        targetSection.style.display = 'flex';
+                        targetSection.classList.add('active');
+                        
+                        // Nếu là tab voucher, load danh sách voucher
+                        if (sectionId === 'vouchers') {
+                            console.log('Voucher tab selected, loading vouchers list');
+                            if (typeof fetchVouchers === 'function') {
+                                fetchVouchers();
+                            } else {
+                                console.error('fetchVouchers function not found');
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Xử lý form kiểm tra voucher
+            const voucherForm = document.getElementById('verify-voucher-form');
+            if (voucherForm) {
+                console.log('Form voucher found, adding submit event');
+                voucherForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Form voucher submitted');
+                    
+                    const voucherCode = document.getElementById('voucher-code').value.trim();
+                    if (voucherCode && typeof checkVoucherCode === 'function') {
+                        console.log('Checking voucher code:', voucherCode);
+                        checkVoucherCode(voucherCode);
+                    } else {
+                        console.error('Voucher code empty or checkVoucherCode function not found');
+                        if (typeof showNotification === 'function') {
+                            showNotification('Vui lòng nhập mã voucher để kiểm tra', 'error');
+                        }
+                    }
+                    
+                    return false;
+                });
+            } else {
+                console.error('Verify voucher form not found!');
+            }
+        });
+    </script>
 </body>
 </html>

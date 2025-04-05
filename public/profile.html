@@ -7,6 +7,342 @@
   <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="/socket.io/socket.io.js"></script>
+  <style>
+    /* Kiểu dáng chung */
+    :root {
+      --primary-color: #4a90e2;
+      --primary-dark: #357ab7;
+      --secondary-color: #5c6bc0;
+      --danger-color: #e53935;
+      --success-color: #43a047;
+      --warning-color: #fb8c00;
+      --text-color: #333;
+      --text-light: #757575;
+      --bg-color: #f5f7fa;
+      --card-bg: #ffffff;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--text-color);
+    }
+
+    /* Thiết kế profile */
+    .profile-header {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-radius: var(--border-radius);
+      padding: 30px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      color: white;
+      box-shadow: var(--box-shadow);
+      transition: transform 0.3s ease;
+    }
+
+    .profile-header:hover {
+      transform: translateY(-5px);
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      background-color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 25px;
+      font-size: 48px;
+      color: var(--primary-color);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .profile-avatar:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .profile-info h2 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .profile-info p {
+      margin: 5px 0;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    /* Thiết kế card */
+    .card {
+      background-color: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      margin-bottom: 25px;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+      padding: 20px 25px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: rgba(74, 144, 226, 0.05);
+    }
+
+    .card-header h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .card-body {
+      padding: 25px;
+    }
+
+    /* Nút hành động */
+    .action-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn i {
+      margin-right: 8px;
+    }
+
+    .action-btn:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .danger-btn {
+      background-color: var(--danger-color);
+    }
+
+    .danger-btn:hover {
+      background-color: #c62828;
+    }
+
+    /* Form groups */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+      outline: none;
+    }
+
+    .form-group input:disabled {
+      background-color: #f9f9f9;
+      cursor: not-allowed;
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding: 10px 0;
+    }
+
+    .timeline:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 30px;
+      width: 2px;
+      background-color: rgba(74, 144, 226, 0.2);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+    }
+
+    .timeline-icon {
+      background-color: var(--primary-color);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-right: 20px;
+      z-index: 2;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
+    }
+
+    .timeline-content {
+      background-color: rgba(74, 144, 226, 0.05);
+      padding: 15px 20px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      flex-grow: 1;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .timeline-content:hover {
+      background-color: rgba(74, 144, 226, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-content p {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .timeline-time {
+      flex-shrink: 0;
+      width: 100px;
+      text-align: right;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      overflow: auto;
+      transition: all 0.3s ease;
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      margin: 5% auto;
+      width: 90%;
+      max-width: 550px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      animation: modalFadeIn 0.3s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 10px 15px;
+      transition: all 0.2s ease;
+    }
+
+    .modal .close:hover {
+      color: var(--primary-color);
+    }
+
+    .modal h2 {
+      margin: 0;
+      padding: 20px 25px;
+      border-bottom: 1px solid #eee;
+      color: var(--primary-color);
+    }
+
+    .modal-body {
+      padding: 25px;
+    }
+
+    .modal-footer {
+      padding: 15px 25px 25px;
+      text-align: right;
+      border-top: 1px solid #eee;
+    }
+
+    /* Animations & Effects */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .profile-avatar {
+        margin-right: 0;
+        margin-bottom: 15px;
+      }
+
+      .card-header {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .timeline-time {
+        width: auto;
+        margin-left: 10px;
+      }
+    }
+  </style>
   <script src="profile.js"></script>
 </head>
 <body>
@@ -48,7 +384,7 @@
       
       <div class="content-area">
         <!-- Profile Tab -->
-        <div class="tab-content active" id="profile-tab">
+        <div class="tab-content active fade-in" id="profile-tab">
           <div class="profile-header">
             <div class="profile-avatar">
               <i class="fas fa-user-circle"></i>
@@ -62,29 +398,29 @@
           
           <div class="card">
             <div class="card-header">
-              <h3>Thông tin cá nhân</h3>
+              <h3><i class="fas fa-id-card"></i> Thông tin cá nhân</h3>
               <button id="edit-profile-btn" class="action-btn"><i class="fas fa-edit"></i> Chỉnh sửa</button>
             </div>
             <div class="card-body">
               <form id="profile-form">
                 <div class="form-group">
-                  <label>Tên đăng nhập:</label>
+                  <label><i class="fas fa-user"></i> Tên đăng nhập:</label>
                   <input type="text" id="username" disabled>
                 </div>
                 <div class="form-group">
-                  <label>Tên hiển thị:</label>
+                  <label><i class="fas fa-user-tag"></i> Tên hiển thị:</label>
                   <input type="text" id="name" disabled>
                 </div>
                 <div class="form-group">
-                  <label>Email:</label>
+                  <label><i class="fas fa-envelope"></i> Email:</label>
                   <input type="email" id="email" disabled>
                 </div>
                 <div class="form-group">
-                  <label>Quyền hạn:</label>
+                  <label><i class="fas fa-user-shield"></i> Quyền hạn:</label>
                   <input type="text" id="role" disabled>
                 </div>
                 <div class="form-group">
-                  <label>Ngày tạo tài khoản:</label>
+                  <label><i class="fas fa-calendar-alt"></i> Ngày tạo tài khoản:</label>
                   <input type="text" id="createdAt" disabled>
                 </div>
               </form>
@@ -93,10 +429,10 @@
         </div>
         
         <!-- Activity Tab -->
-        <div class="tab-content" id="activity-tab">
+        <div class="tab-content fade-in" id="activity-tab">
           <div class="card">
             <div class="card-header">
-              <h3>Hoạt động gần đây</h3>
+              <h3><i class="fas fa-history"></i> Hoạt động gần đây</h3>
             </div>
             <div class="card-body">
               <div class="timeline">
@@ -115,23 +451,23 @@
         </div>
         
         <!-- Security Tab -->
-        <div class="tab-content" id="security-tab">
+        <div class="tab-content fade-in" id="security-tab">
           <div class="card">
             <div class="card-header">
-              <h3>Thay đổi mật khẩu</h3>
+              <h3><i class="fas fa-key"></i> Thay đổi mật khẩu</h3>
             </div>
             <div class="card-body">
               <form id="password-form">
                 <div class="form-group">
-                  <label>Mật khẩu hiện tại:</label>
+                  <label><i class="fas fa-lock"></i> Mật khẩu hiện tại:</label>
                   <input type="password" id="current-password" required>
                 </div>
                 <div class="form-group">
-                  <label>Mật khẩu mới:</label>
+                  <label><i class="fas fa-lock"></i> Mật khẩu mới:</label>
                   <input type="password" id="new-password" required>
                 </div>
                 <div class="form-group">
-                  <label>Xác nhận mật khẩu mới:</label>
+                  <label><i class="fas fa-check-circle"></i> Xác nhận mật khẩu mới:</label>
                   <input type="password" id="confirm-password" required>
                 </div>
                 <div class="form-actions">
@@ -143,7 +479,7 @@
           
           <div class="card">
             <div class="card-header">
-              <h3>Quản lý phiên đăng nhập</h3>
+              <h3><i class="fas fa-shield-alt"></i> Quản lý phiên đăng nhập</h3>
             </div>
             <div class="card-body">
               <p>Bạn có thể đăng xuất khỏi tất cả các thiết bị khác mà không cần đăng xuất khỏi thiết bị hiện tại.</p>
@@ -159,21 +495,21 @@
   <div id="edit-profile-modal" class="modal">
     <div class="modal-content">
       <span class="close">&times;</span>
-      <h2>Chỉnh sửa thông tin cá nhân</h2>
+      <h2><i class="fas fa-user-edit"></i> Chỉnh sửa thông tin cá nhân</h2>
       <div class="modal-body">
         <form id="edit-profile-form">
           <div class="form-group">
-            <label>Tên hiển thị:</label>
+            <label><i class="fas fa-user-tag"></i> Tên hiển thị:</label>
             <input type="text" id="edit-name" required>
           </div>
           <div class="form-group">
-            <label>Email:</label>
+            <label><i class="fas fa-envelope"></i> Email:</label>
             <input type="email" id="edit-email" required>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button id="save-profile-btn" class="action-btn">Lưu thay đổi</button>
+        <button id="save-profile-btn" class="action-btn"><i class="fas fa-save"></i> Lưu thay đổi</button>
       </div>
     </div>
   </div>

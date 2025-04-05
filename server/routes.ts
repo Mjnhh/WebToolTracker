@@ -13,6 +13,7 @@ import { storage } from "./storage";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createUserRouter } from "./routes/users";
+import voucherRouter from './routes/vouchers';
 
 // Lấy __dirname trong ES modules (vì __dirname không tồn tại trong ES modules)
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,9 @@ export async function registerRoutes(app: Express) {
   // API cho người dùng
   app.use("/api/users", createUserRouter());
   console.log("Registered user API routes at /api/users");
+  
+  app.use("/api/vouchers", voucherRouter);
+  console.log("Registered voucher API routes at /api/vouchers");
   
   // Route cho trang admin đặt trước static middleware
   app.get('/admin', (req, res) => {

@@ -481,7 +481,7 @@ class Chatbot {
         },
         body: JSON.stringify({
             message,
-            sender: 'user'
+          sender: 'user'
         })
       });
       
