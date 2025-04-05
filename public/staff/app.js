@@ -134,13 +134,24 @@ function setupSpotifyPlayer() {
     spotifyPlayer.addListener('ready', ({ device_id }) => {
       console.log('Spotify player ready with device ID', device_id);
       spotifyDeviceId = device_id;
-      document.getElementById('spotify-not-connected').style.display = 'none';
-      document.getElementById('spotify-player-container').style.display = 'block';
+      
+      // Hiển thị player container và ẩn thông báo kết nối
+      const notConnectedElement = document.getElementById('spotify-not-connected');
+      const playerContainer = document.getElementById('spotify-player-container');
+      
+      if (notConnectedElement) notConnectedElement.style.display = 'none';
+      if (playerContainer) playerContainer.style.display = 'block';
       
       showNotification('Trình phát Spotify đã sẵn sàng', 'success');
       
-      // Lấy danh sách playlist của người dùng
-      fetchUserPlaylists();
+      // Kiểm tra rằng DOM đã sẵn sàng trước khi fetch playlists
+      if (document.getElementById('playlist-selector')) {
+        console.log('DOM đã sẵn sàng, lấy danh sách playlist');
+        setTimeout(fetchUserPlaylists, 1000); // Thêm timeout để đảm bảo Web Player SDK đã khởi tạo hoàn toàn
+      } else {
+        console.log('Playlist selector chưa sẵn sàng, thử lại sau 1 giây');
+        setTimeout(fetchUserPlaylists, 2000);
+      }
     });
     
     // Theo dõi thay đổi trạng thái
@@ -455,7 +466,19 @@ window.addEventListener('message', (event) => {
 
 // Hàm để lấy danh sách playlist của người dùng
 function fetchUserPlaylists() {
-  if (!spotifyToken) return;
+  console.log('Đang lấy danh sách playlist người dùng...');
+  if (!spotifyToken) {
+    console.error('Không thể lấy playlist: Không có token');
+    return;
+  }
+  
+  // Kiểm tra xem phần tử playlist-selector đã tồn tại chưa
+  const playlistSelector = document.getElementById('playlist-selector');
+  if (!playlistSelector) {
+    console.warn('Không tìm thấy phần tử playlist-selector, thử lại sau 1 giây');
+    setTimeout(fetchUserPlaylists, 1000);
+    return;
+  }
   
   fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
     headers: {
@@ -469,28 +492,45 @@ function fetchUserPlaylists() {
         localStorage.removeItem('spotifyToken');
         spotifyToken = null;
         showNotification('Token Spotify hết hạn, vui lòng kết nối lại', 'error');
-        document.getElementById('spotify-not-connected').style.display = 'block';
-        document.getElementById('spotify-player-container').style.display = 'none';
+        
+        const notConnectedElement = document.getElementById('spotify-not-connected');
+        const playerContainer = document.getElementById('spotify-player-container');
+        if (notConnectedElement) notConnectedElement.style.display = 'block';
+        if (playerContainer) playerContainer.style.display = 'none';
       }
-      throw new Error('Network response was not ok');
+      throw new Error('Network response was not ok: ' + response.status);
     }
     return response.json();
   })
   .then(data => {
-    // Cập nhật danh sách playlist
+    console.log('Đã nhận danh sách playlist:', data.items ? data.items.length : 'Không có');
+    
+    // Kiểm tra lại phần tử playlist-selector (phòng trường hợp đã bị xóa)
     const playlistSelector = document.getElementById('playlist-selector');
+    if (!playlistSelector) {
+      console.error('Không tìm thấy phần tử playlist-selector sau khi fetch dữ liệu');
+      return;
+    }
+    
+    // Cập nhật danh sách playlist
     playlistSelector.innerHTML = '<option value="">Chọn playlist</option>';
     
-    data.items.forEach(playlist => {
-      const option = document.createElement('option');
-      option.value = playlist.id;
-      option.textContent = playlist.name;
-      playlistSelector.appendChild(option);
-    });
+    if (data.items && data.items.length > 0) {
+      data.items.forEach(playlist => {
+        const option = document.createElement('option');
+        option.value = playlist.id;
+        option.textContent = playlist.name;
+        playlistSelector.appendChild(option);
+      });
+      console.log('Đã cập nhật danh sách playlist trong giao diện');
+    } else {
+      console.log('Không có playlist nào được tìm thấy');
+      playlistSelector.innerHTML += '<option value="" disabled>Không có playlist</option>';
+    }
   })
   .catch(error => {
     console.error('Error fetching playlists:', error);
-    showNotification('Không thể tải danh sách playlist', 'error');
+    showNotification('Không thể tải danh sách playlist: ' + error.message, 'error');
   });
 }
 
@@ -2497,64 +2537,26 @@ function setupStats() {
 
 // Hàm khởi tạo
 function init() {
-  // Kiểm tra token
-  const token = getToken();
-  if (!token) {
-    showLogin();
-  } else {
-    // Xác thực token
-    fetch('/api/auth/verify', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Token không hợp lệ');
-      }
-      return response.json();
-    })
-    .then(data => {
-      currentUser = data;
-      hideLogin();
-      
-      // Hiển thị tên nhân viên
-      document.getElementById('staff-name').textContent = data.name || data.username;
-      
-      // Thiết lập các tab
-      setupTabs();
-      
-      // Thiết lập cài đặt
-      setupSettings();
-      
-      // Thiết lập thống kê
-      setupStats();
-      
-      // Tải danh sách phiên hỗ trợ
-      fetchSupportSessions();
-
-      // Kết nối socket.io cho nhân viên
-      connectSocket();
-
-      // Thiết lập lọc phiên
-      document.getElementById('session-filter').addEventListener('change', filterSessions);
-      
-      // Khởi tạo tính năng Spotify
-      initializeSpotifyFeature();
-      
-      // Thiết lập riêng nút kết nối Spotify
-      setupSpotifyConnectButton();
-      
-      // Khởi tạo tính năng voucher
-      console.log("Calling initVoucherFunctions from init()");
-      setTimeout(initVoucherFunctions, 1000); // Thêm timeout để đảm bảo DOM đã load
-    })
-    .catch(error => {
-      console.error('Lỗi xác thực:', error);
-      showLogin();
-    });
-  }
+  console.log('Khởi tạo ứng dụng staff...');
+  
+  // Kiểm tra trạng thái đăng nhập
+  checkLoginStatus();
+  
+  // Thiết lập kết nối socket sau khi đăng nhập
+  initializeSocket();
+  
+  // Khởi tạo giao diện và sự kiện
+  setupEventListeners();
+  setupTabNavigation();
+  setupSettings();
+  setupTemplates();
+  setupStats();
+  
+  // Khởi tạo Spotify
+  initializeSpotifyFeature();
+  
+  // Khởi tạo các tính năng voucher
+  initVoucherFunctions();
 }
 
 // Hàm lấy token xác thực
@@ -3405,3 +3407,162 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // ... other DOMContentLoaded handlers ...
 });
+
+// Tải giao diện chat và chuẩn bị cho phiên
+function loadChat(sessionId) {
+  console.log('Loading chat for session:', sessionId);
+
+  if (!sessionId) {
+    console.error('Session ID is required');
+    return;
+  }
+
+  // Lưu sessionId hiện tại
+  currentSessionId = sessionId;
+
+  // Hiển thị container chat (ẩn thông báo chưa chọn phiên)
+  const chatContainer = document.getElementById('chat-container');
+  const chatMessages = document.createElement('div');
+  chatMessages.className = 'chat-messages';
+  chatMessages.id = 'chat-messages';
+  
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'chat-input-container';
+  inputContainer.innerHTML = `
+    <div class="input-wrapper">
+      <textarea id="chat-input" placeholder="Nhập tin nhắn..."></textarea>
+      <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="quick-responses">
+      <div class="quick-response-item">Xin chào, tôi có thể giúp gì cho bạn?</div>
+      <div class="quick-response-item">Cảm ơn bạn đã liên hệ với chúng tôi.</div>
+      <div class="quick-response-item">Vui lòng đợi một chút, tôi đang kiểm tra thông tin.</div>
+    </div>
+  `;
+  
+  // Xóa nội dung cũ và thêm các phần tử mới
+  chatContainer.innerHTML = '';
+  chatContainer.appendChild(chatMessages);
+  chatContainer.appendChild(inputContainer);
+
+  // Thiết lập sự kiện gửi tin nhắn
+  const chatInput = document.getElementById('chat-input');
+  const sendButton = document.getElementById('send-button');
+  
+  if (chatInput && sendButton) {
+    // Gửi tin nhắn khi nhấn nút
+    sendButton.addEventListener('click', () => {
+      sendMessage();
+    });
+    
+    // Gửi tin nhắn khi nhấn Enter (không phải Shift+Enter)
+    chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  // Thiết lập câu trả lời nhanh
+  setupQuickResponses();
+
+  // Cập nhật thông tin phiên
+  updateSessionInfo(sessionId);
+
+  // Kết nối socket với phiên hiện tại
+  joinChatSession(sessionId);
+
+  // Kiểm tra và tiếp nhận phiên nếu cần
+  const selectedSession = sessionList.find(session => session.id === sessionId);
+
+  if (selectedSession && selectedSession.needsHumanSupport && !selectedSession.isHumanAssigned) {
+    // Phiên cần hỗ trợ và chưa được tiếp nhận, tiếp nhận trước rồi mới tải tin nhắn
+    assignSession(sessionId)
+      .then(() => {
+        // Sau khi tiếp nhận thành công, tải tin nhắn
+        fetchSessionMessages(sessionId);
+      })
+      .catch(error => {
+        console.error('Failed to assign session:', error);
+        // Vẫn thử tải tin nhắn ngay cả khi không tiếp nhận được
+        fetchSessionMessages(sessionId);
+      });
+  } else {
+    // Phiên đã được tiếp nhận, tải tin nhắn ngay
+    fetchSessionMessages(sessionId);
+  }
+}
+
+// Cập nhật thông tin phiên
+function updateSessionInfo(sessionId) {
+  // Tìm phiên trong danh sách
+  const session = sessionList.find(s => s.id === sessionId);
+  if (!session) return;
+  
+  // Cập nhật tên khách hàng
+  const clientNameElement = document.getElementById('client-name');
+  if (clientNameElement) {
+    clientNameElement.textContent = session.user ? session.user.name || 'Khách hàng' : 'Khách hàng';
+  }
+  
+  // Cập nhật thời gian
+  const sessionTimeElement = document.getElementById('session-time');
+  if (sessionTimeElement && session.createdAt) {
+    const createdAt = new Date(session.createdAt);
+    const formattedDate = formatDate(createdAt);
+    sessionTimeElement.textContent = `Bắt đầu: ${formattedDate}`;
+  }
+  
+  // Cập nhật đánh giá nếu có
+  const sessionRatingElement = document.getElementById('session-rating');
+  if (sessionRatingElement) {
+    if (session.rating) {
+      sessionRatingElement.style.display = 'block';
+      
+      // Tạo HTML cho stars
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= session.rating) {
+          starsHtml += '<i class="fas fa-star"></i>';
+        } else {
+          starsHtml += '<i class="far fa-star"></i>';
+        }
+      }
+      
+      sessionRatingElement.innerHTML = `
+        <div class="rating-stars">${starsHtml}</div>
+        <span class="rating-text">${session.rating}/5</span>
+      `;
+    } else {
+      sessionRatingElement.style.display = 'none';
+    }
+  }
+  
+  // Cập nhật phản hồi nếu có
+  const sessionFeedbackElement = document.getElementById('session-feedback');
+  if (sessionFeedbackElement) {
+    if (session.feedback) {
+      sessionFeedbackElement.style.display = 'block';
+      sessionFeedbackElement.innerHTML = `
+        <div class="feedback-icon"><i class="fas fa-comment-dots"></i></div>
+        <div class="feedback-text">"${session.feedback}"</div>
+      `;
+    } else {
+      sessionFeedbackElement.style.display = 'none';
+    }
+  }
+  
+  // Cập nhật nút kết thúc phiên
+  const endSessionBtn = document.getElementById('end-session-btn');
+  if (endSessionBtn) {
+    // Chỉ bật nút khi phiên đang hoạt động và được tiếp nhận bởi người dùng hiện tại
+    if (session.status === 'active' && session.isHumanAssigned) {
+      endSessionBtn.disabled = false;
+      endSessionBtn.style.opacity = '1';
+    } else {
+      endSessionBtn.disabled = true;
+      endSessionBtn.style.opacity = '0.5';
+    }
+  }
+}

@@ -1605,11 +1605,15 @@ body.theme-orange {
 
 /* Spotify Player Styles */
 .spotify-player {
-  margin-top: 1rem;
-  padding: 0.75rem;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  width: 100%;
+  overflow: visible;
   background-color: #181818;
   border-radius: var(--radius-md);
   color: #fff;
+  padding: 0.75rem;
 }
 
 .spotify-header {
@@ -1656,6 +1660,12 @@ body.theme-orange {
 }
 
 .spotify-player-container {
+  padding: 0.75rem;
+  border-radius: 8px;
+  background-color: #222;
+  margin-top: 0.5rem;
+  max-height: none;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1765,21 +1775,42 @@ body.theme-orange {
 
 .playlists-section {
   margin-top: 0.5rem;
+  width: 100%;
+  z-index: 100;
+  position: relative;
+  margin-bottom: 0.75rem;
 }
 
 .playlist-selector {
   width: 100%;
-  padding: 0.4rem;
+  padding: 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
   background-color: #333;
   color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  appearance: menulist;
+  max-height: 2.5rem;
+  cursor: pointer;
+  z-index: 100;
+  padding: 0.6rem;
+  border: 1px solid #444;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.3px;
+}
+
+.playlist-selector:focus {
+  outline: none;
+  border-color: #1DB954;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
 }
 
 .playlist-selector option {
   background-color: #333;
   color: white;
+  padding: 5px 8px;
 }
 
 /* Dark mode support */
@@ -1795,7 +1826,8 @@ body.dark-mode #volume-slider {
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
   .spotify-player {
-    display: none;
+    display: block;
+    max-height: none;
   }
 }
 
