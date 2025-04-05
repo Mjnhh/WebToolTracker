@@ -11,6 +11,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
   getAllUsers(): Promise<User[]>;
   
   // Inquiry operations
@@ -82,6 +83,7 @@ export class MemStorage implements IStorage {
     this.initializeAdminUser();
     this.initializeDefaultPatterns();
     this.initializeSampleData();
+    this.initializeDefaultEndpoints();
   }
 
   private async initializeAdminUser() {
@@ -373,6 +375,76 @@ export class MemStorage implements IStorage {
     });
   }
 
+  // Thêm các API endpoints mặc định vào cơ sở dữ liệu
+  private async initializeDefaultEndpoints() {
+    try {
+      // Xóa tất cả endpoints hiện có
+      const existingEndpoints = await this.getAllEndpoints();
+      for (const endpoint of existingEndpoints) {
+        await this.deleteEndpoint(endpoint.id);
+      }
+      console.log('Removed all existing endpoints for re-initialization');
+
+      // Danh sách các endpoint để thêm
+      const defaultEndpoints = [
+        // Auth API Endpoints
+        { name: "Auth - Login", method: "POST", path: "/api/auth/login", description: "Đăng nhập vào hệ thống", authRequired: false, isActive: true },
+        { name: "Auth - Logout", method: "POST", path: "/api/auth/logout", description: "Đăng xuất khỏi hệ thống", authRequired: true, isActive: true },
+        { name: "Auth - Verify Token", method: "GET", path: "/api/auth/verify", description: "Xác thực token JWT", authRequired: true, isActive: true },
+        { name: "Auth - Register", method: "POST", path: "/api/auth/register", description: "Đăng ký tài khoản mới", authRequired: false, isActive: true },
+        { name: "Auth - Refresh Token", method: "POST", path: "/api/auth/refresh", description: "Làm mới token JWT", authRequired: true, isActive: true },
+        { name: "Auth - Session", method: "GET", path: "/api/auth/session", description: "Kiểm tra phiên đăng nhập", authRequired: false, isActive: true },
+
+        // Chat API Endpoints
+        { name: "Chat - Create Session", method: "POST", path: "/api/chat/session", description: "Khởi tạo phiên chat mới", authRequired: false, isActive: true },
+        { name: "Chat - Get Session", method: "GET", path: "/api/chat/session/:sessionId", description: "Lấy thông tin phiên chat", authRequired: false, isActive: true },
+        { name: "Chat - Send Message", method: "POST", path: "/api/chat/session/:sessionId/message", description: "Gửi tin nhắn mới", authRequired: false, isActive: true },
+        { name: "Chat - Get Messages", method: "GET", path: "/api/chat/session/:sessionId/messages", description: "Lấy tin nhắn của phiên chat", authRequired: false, isActive: true },
+        { name: "Chat - Rate Session", method: "POST", path: "/api/chat/session/:sessionId/rate", description: "Đánh giá phiên chat", authRequired: false, isActive: true },
+
+        // Support API Endpoints
+        { name: "Support - Assign Staff", method: "POST", path: "/api/support/assign", description: "Phân công nhân viên hỗ trợ", authRequired: true, isActive: true },
+        { name: "Support - Send Message", method: "POST", path: "/api/support/message", description: "Gửi tin nhắn từ nhân viên", authRequired: true, isActive: true },
+        { name: "Support - End Session", method: "POST", path: "/api/support/end", description: "Kết thúc phiên hỗ trợ", authRequired: true, isActive: true },
+        { name: "Support - Get Sessions", method: "GET", path: "/api/support/sessions", description: "Lấy danh sách phiên hỗ trợ", authRequired: true, isActive: true },
+        { name: "Support - Get Messages", method: "GET", path: "/api/support/messages/:sessionId", description: "Lấy tin nhắn của phiên hỗ trợ", authRequired: true, isActive: true },
+        { name: "Support - Get Stats", method: "GET", path: "/api/support/stats", description: "Lấy thống kê hỗ trợ", authRequired: true, isActive: true },
+
+        // Contact API Endpoints
+        { name: "Contact - Submit", method: "POST", path: "/api/contact/submit", description: "Gửi form liên hệ", authRequired: false, isActive: true },
+
+        // Admin API Endpoints
+        { name: "Admin - Get Users", method: "GET", path: "/api/admin/users", description: "Lấy danh sách người dùng", authRequired: true, isActive: true },
+        { name: "Admin - Get Inquiries", method: "GET", path: "/api/admin/inquiries", description: "Lấy danh sách liên hệ", authRequired: true, isActive: true },
+        { name: "Admin - Get Inquiry", method: "GET", path: "/api/admin/inquiries/:id", description: "Lấy chi tiết một liên hệ", authRequired: true, isActive: true },
+        { name: "Admin - Update Inquiry Status", method: "PATCH", path: "/api/admin/inquiries/:id/status", description: "Cập nhật trạng thái liên hệ", authRequired: true, isActive: true },
+        { name: "Admin - Delete Inquiry", method: "DELETE", path: "/api/admin/inquiries/:id", description: "Xóa liên hệ", authRequired: true, isActive: true },
+        { name: "Admin - Get Endpoints", method: "GET", path: "/api/admin/endpoints", description: "Liệt kê các API endpoints", authRequired: true, isActive: true },
+        { name: "Admin - Create Endpoint", method: "POST", path: "/api/admin/endpoints", description: "Tạo endpoint mới", authRequired: true, isActive: true },
+        { name: "Admin - Update Endpoint", method: "PATCH", path: "/api/admin/endpoints/:id", description: "Cập nhật endpoint", authRequired: true, isActive: true },
+        { name: "Admin - Delete Endpoint", method: "DELETE", path: "/api/admin/endpoints/:id", description: "Xóa endpoint", authRequired: true, isActive: true },
+        { name: "Admin - Add Chatbot Pattern", method: "POST", path: "/api/admin/chatbot/patterns", description: "Thêm mẫu câu mới cho chatbot", authRequired: true, isActive: true },
+        { name: "Admin - Update Pattern Score", method: "PATCH", path: "/api/admin/chatbot/patterns/:pattern/score", description: "Cập nhật điểm số cho mẫu câu", authRequired: true, isActive: true },
+        { name: "Admin - Get Patterns", method: "GET", path: "/api/admin/chatbot/patterns", description: "Lấy tất cả mẫu câu chatbot", authRequired: true, isActive: true },
+        { name: "Admin - Get Pattern", method: "GET", path: "/api/admin/chatbot/patterns/:pattern", description: "Lấy chi tiết mẫu câu", authRequired: true, isActive: true },
+        { name: "Admin - Delete Pattern", method: "DELETE", path: "/api/admin/chatbot/patterns/:pattern", description: "Xóa mẫu câu", authRequired: true, isActive: true },
+
+        // Spotify API Endpoints
+        { name: "Spotify - Proxy GET", method: "GET", path: "/api/spotify/proxy/*", description: "Proxy endpoint cho Spotify API (CORS)", authRequired: true, isActive: true },
+        { name: "Spotify - Proxy POST", method: "POST", path: "/api/spotify/proxy/*", description: "Endpoint POST proxy cho Spotify API", authRequired: true, isActive: true },
+      ];
+
+      // Thêm từng endpoint vào cơ sở dữ liệu
+      for (const endpoint of defaultEndpoints) {
+        await this.createEndpoint(endpoint);
+      }
+
+      console.log(`Added ${defaultEndpoints.length} default API endpoints to the database`);
+    } catch (error) {
+      console.error('Failed to initialize default endpoints:', error);
+    }
+  }
+
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -429,6 +501,26 @@ export class MemStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const existingUser = this.users.get(id);
+    
+    if (!existingUser) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+    
+    // Cập nhật thông tin người dùng
+    const updatedUser = {
+      ...existingUser,
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    // Lưu lại vào bộ nhớ
+    this.users.set(id, updatedUser);
+    
+    return updatedUser;
   }
 
   // Inquiry operations
@@ -530,7 +622,7 @@ export class MemStorage implements IStorage {
 Tôi có thể giúp bạn với các vấn đề:
 
 🌐 Tư vấn về dịch vụ thiết kế website
-💻 Tư vấn về công nghệ và giải pháp 
+�� Tư vấn về công nghệ và giải pháp 
 💰 Báo giá và thời gian thực hiện
 📋 Thông tin về quy trình làm việc
 🛠️ Hỗ trợ kỹ thuật

@@ -175,6 +175,57 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Modal xử lý endpoint
     setupEndpointModal();
+    
+    // Modal xử lý user
+    setupUserModal();
+  }
+
+  // Setup modal chỉnh sửa thông tin người dùng
+  function setupUserModal() {
+    document.getElementById('save-user-btn').addEventListener('click', function() {
+      const userId = document.getElementById('user-id').value;
+      const token = localStorage.getItem('token');
+      const authHeader = { 'Authorization': `Bearer ${token}` };
+      
+      // Lấy thông tin từ form
+      const userData = {
+        email: document.getElementById('user-email').value,
+        name: document.getElementById('user-name').value,
+        role: document.getElementById('user-role').value,
+        password: document.getElementById('user-password').value
+      };
+      
+      // Nếu mật khẩu trống, xóa trường password khỏi dữ liệu cập nhật
+      if (!userData.password || userData.password.trim() === '') {
+        delete userData.password;
+      }
+      
+      // Gửi request cập nhật
+      fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeader
+        },
+        body: JSON.stringify(userData)
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error('Update failed');
+        }
+      })
+      .then(updatedUser => {
+        alert('Cập nhật thông tin người dùng thành công!');
+        document.getElementById('user-modal').style.display = 'none';
+        loadUsers(); // Tải lại danh sách người dùng
+      })
+      .catch(error => {
+        console.error('Error updating user:', error);
+        alert('Có lỗi xảy ra khi cập nhật thông tin người dùng.');
+      });
+    });
   }
 
   // Tải dữ liệu dashboard
@@ -272,17 +323,70 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>${user.name || ''}</td>
             <td>${user.role || 'user'}</td>
             <td class="action-buttons">
-              <button class="edit-btn btn-primary" data-id="${user.id}"><i class="fas fa-edit"></i> Sửa</button>
-              <button class="delete-btn btn-danger" data-id="${user.id}"><i class="fas fa-trash-alt"></i> Xóa</button>
+              <button class="edit-user-btn btn-primary" data-id="${user.id}"><i class="fas fa-edit"></i> Sửa</button>
+              <button class="delete-user-btn btn-danger" data-id="${user.id}"><i class="fas fa-trash-alt"></i> Xóa</button>
             </td>
           `;
           usersTable.appendChild(row);
         });
+        
+        // Xử lý sự kiện cho nút chỉnh sửa
+        setupUserButtons();
       }
     })
     .catch(error => {
       console.error('Error loading users:', error);
       usersTable.innerHTML = '<tr><td colspan="6" class="no-data">Lỗi khi tải dữ liệu</td></tr>';
+    });
+  }
+
+  // Thiết lập xử lý cho các nút trong bảng users
+  function setupUserButtons() {
+    // Xử lý nút chỉnh sửa
+    const editButtons = document.querySelectorAll('.edit-user-btn');
+    editButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const userId = this.getAttribute('data-id');
+        openUserEditModal(userId);
+      });
+    });
+    
+    // Xử lý nút xóa
+    const deleteButtons = document.querySelectorAll('.delete-user-btn');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const userId = this.getAttribute('data-id');
+        // TODO: Implement user deletion if needed
+        alert('Chức năng xóa người dùng chưa được hỗ trợ');
+      });
+    });
+  }
+
+  // Mở modal chỉnh sửa thông tin người dùng
+  function openUserEditModal(userId) {
+    const token = localStorage.getItem('token');
+    const authHeader = { 'Authorization': `Bearer ${token}` };
+    
+    // Lấy thông tin chi tiết người dùng
+    fetch(`/api/admin/users/${userId}`, {
+      headers: authHeader
+    })
+    .then(response => response.json())
+    .then(user => {
+      // Điền thông tin vào form
+      document.getElementById('user-id').value = user.id;
+      document.getElementById('user-username').value = user.username;
+      document.getElementById('user-email').value = user.email;
+      document.getElementById('user-name').value = user.name || '';
+      document.getElementById('user-role').value = user.role || 'user';
+      document.getElementById('user-password').value = ''; // Không hiển thị mật khẩu
+      
+      // Hiển thị modal
+      document.getElementById('user-modal').style.display = 'block';
+    })
+    .catch(error => {
+      console.error('Error loading user details:', error);
+      alert('Có lỗi xảy ra khi tải thông tin người dùng');
     });
   }
 

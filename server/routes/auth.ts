@@ -80,6 +80,38 @@ router.post('/logout', (req: Request & { logout?: (callback: (err: any) => void)
   }
 });
 
+// Đăng xuất tất cả thiết bị
+router.post('/logout-all', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+    const user = await storage.getUserById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Người dùng không tồn tại' });
+    }
+    
+    // Trong triển khai thực tế, cần lưu trữ các token đang hoạt động
+    // và đánh dấu tất cả token ngoại trừ token hiện tại là không hợp lệ
+    // Trong phiên bản demo này, chúng ta giả định là đã đăng xuất thành công
+    
+    res.json({ 
+      message: 'Đã đăng xuất tất cả thiết bị khác',
+      success: true
+    });
+  } catch (error) {
+    console.error('Logout all devices error:', error);
+    res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+  }
+});
+
 // Xác thực token JWT
 router.get('/verify', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;

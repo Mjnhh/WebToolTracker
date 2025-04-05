@@ -12,6 +12,7 @@ import { initializeSocketServer } from "./io";
 import { storage } from "./storage";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createUserRouter } from "./routes/users";
 
 // Lấy __dirname trong ES modules (vì __dirname không tồn tại trong ES modules)
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +46,10 @@ export async function registerRoutes(app: Express) {
   app.use("/api/spotify", spotifyRouter);
   console.log("Registered spotify API routes at /api/spotify");
   
+  // API cho người dùng
+  app.use("/api/users", createUserRouter());
+  console.log("Registered user API routes at /api/users");
+  
   // Route cho trang admin đặt trước static middleware
   app.get('/admin', (req, res) => {
     console.log("Serving admin page...");
@@ -52,6 +57,13 @@ export async function registerRoutes(app: Express) {
     res.sendFile(path.join(process.cwd(), 'public/admin-control-panel.html'));
   });
   console.log("Registered admin page route at /admin");
+  
+  // Route cho trang hồ sơ cá nhân
+  app.get('/profile', (req, res) => {
+    console.log("Serving profile page...");
+    res.sendFile(path.join(process.cwd(), 'public/profile.html'));
+  });
+  console.log("Registered profile page route at /profile");
   
   // Phục vụ các trang tĩnh từ thư mục public
   app.use(express.static("public"));

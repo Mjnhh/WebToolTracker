@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import { insertEndpointSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "very-secret-key-for-jwt-tokens";
@@ -56,6 +57,59 @@ router.get("/users", isAdmin, async (req, res, next) => {
       return userWithoutPassword;
     });
     res.json(usersWithoutPassword);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Admin - Lấy thông tin chi tiết một user
+router.get("/users/:id", isAdmin, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const user = await storage.getUser(id);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Loại bỏ trường password trước khi gửi về client
+    const { password, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Admin - Cập nhật thông tin user
+router.patch("/users/:id", isAdmin, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { email, name, role, password } = req.body;
+    
+    // Kiểm tra xem user có tồn tại không
+    const existingUser = await storage.getUser(id);
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Chuẩn bị dữ liệu cập nhật, loại bỏ các giá trị undefined
+    const updateData: any = {};
+    if (email) updateData.email = email;
+    if (name) updateData.name = name;
+    if (role) updateData.role = role;
+    
+    // Nếu có mật khẩu mới, hash và cập nhật
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+    
+    // Cập nhật user
+    const updatedUser = await storage.updateUser(id, updateData);
+    
+    // Loại bỏ trường password trước khi gửi về client
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    res.json(userWithoutPassword);
   } catch (error) {
     next(error);
   }

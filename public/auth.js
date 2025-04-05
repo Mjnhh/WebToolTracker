@@ -89,6 +89,19 @@ function addAuthStyles() {
         margin-right: 15px;
         font-weight: 500;
       }
+      .profile-btn {
+        color: #fff;
+        background-color: #4a90e2;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 14px;
+        margin-right: 10px;
+        transition: background-color 0.3s;
+      }
+      .profile-btn:hover {
+        background-color: #357bcb;
+      }
       .logout-btn {
         color: #fff;
         background-color: #f44336;
@@ -119,6 +132,7 @@ function updateAuthButtons(data) {
     console.log('Updating auth buttons for user:', username);
     authButtons.innerHTML = `
       <span class="user-greeting">Xin chào, ${username}</span>
+      <a href="/profile" class="profile-btn" id="profile-button"><i class="fas fa-user-circle"></i> Hồ sơ</a>
       <a href="#" class="logout-btn" id="logout-button">Đăng xuất</a>
     `;
     setupLogoutButton();
