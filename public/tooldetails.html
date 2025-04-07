@@ -9,32 +9,244 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="tooldetails.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/particles.js/2.0.0/particles.min.js"></script>
+    <script src="auth.js"></script>
+    
+    <style>
+        /* Header styles */
+        header {
+            background-color: var(--dark-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        
+        .logo-img {
+            height: 80px;
+            width: auto;
+            max-width: 100px;
+            transition: transform var(--transition-speed);
+        }
+        
+        .name-img {
+            height: 50px;
+            max-width: 70%;
+            transition: transform var(--transition-speed);
+            margin-left: 10px;
+        }
+        
+        .logo:hover .logo-img,
+        .logo:hover .name-img {
+            transform: scale(1.05);
+        }
+        
+        nav {
+            flex: 0 1 auto;
+            display: flex;
+            justify-content: center;
+        }
+        
+        nav ul {
+            display: flex;
+            gap: 1.5rem;
+            margin: 0;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+        
+        nav ul li {
+            position: relative;
+            white-space: nowrap;
+        }
+        
+        nav ul li a {
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+            position: relative;
+            padding-bottom: 5px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary-color);
+        }
+        
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+        
+        nav ul li a:hover::after {
+            width: 100%;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        
+        .auth-buttons a {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        .login-btn {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+        }
+        
+        .login-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .register-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .register-btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-3px);
+        }
+        
+        /* Optimize for tablets */
+        @media screen and (max-width: 992px) {
+            nav ul {
+                gap: 1rem;
+            }
+            
+            nav ul li a {
+                font-size: 0.9rem;
+            }
+            
+            .auth-buttons a {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Media query for mobile devices */
+        @media screen and (max-width: 768px) {
+            .nav-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .logo {
+                margin-bottom: 1rem;
+            }
+            
+            .logo-img {
+                height: 60px;
+            }
+            
+            .name-img {
+                height: 40px;
+            }
+            
+            nav ul {
+                gap: 1rem;
+                margin-bottom: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .auth-buttons {
+                margin: 0.5rem 0;
+            }
+        }
+        
+        /* Quiz Badge Styles */
+        .quiz-link {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .quiz-badge {
+            font-size: 0.7rem;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        /* Ẩn mobile menu button */
+        .mobile-menu-btn {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <!-- Modern Header -->
-    <header class="header-main">
+    <!-- Header -->
+    <header>
         <div class="container nav-container">
             <a href="coding-team-website.html#home" class="logo">
-                <img src="logo.png" alt="Logo" class="logo-img">
-                <img src="name.png" alt="Name" class="name-img">
+                <img src="optimized/logo.png" alt="Logo" class="logo-img">
+                <img src="optimized/name.png" alt="Name" class="name-img">
             </a>
-            <nav class="main-nav">
+            <nav>
                 <ul>
-                    <li><a href="#home" data-i18n="home">Trang chủ</a></li>
-                    <li><a href="#services" data-i18n="services">Dịch vụ</a></li>
-                    <li><a href="#team" data-i18n="contact">Liên hệ</a></li>
-                    <li><a href="#faq" data-i18n="help">Trợ giúp</a></li>
+                    <li><a href="coding-team-website.html#home" data-i18n="home">Trang chủ</a></li>
+                    <li><a href="coding-team-website.html#services" data-i18n="services">Dịch vụ</a></li>
+                    <li><a href="coding-team-website.html#team" data-i18n="contact">Liên hệ</a></li>
+                    <li><a href="coding-team-website.html#faq" data-i18n="help">Trợ giúp</a></li>
+                    <li><a href="quiz.html" class="quiz-link">Quiz <span class="quiz-badge">Mới</span></a></li>
                 </ul>
             </nav>
             <div class="auth-buttons">
                 <a href="login.html" class="login-btn" id="login-button" data-i18n="login">Đăng nhập</a>
                 <a href="register.html" class="register-btn" id="register-button" data-i18n="register">Đăng ký</a>
             </div>
-            <button class="mobile-menu-btn">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
         </div>
     </header>
 
@@ -572,7 +784,5 @@
             }
         });
     </script>
-    <script src="auth.js"></script>
-    <script src="contact.js"></script>
 </body>
 </html>

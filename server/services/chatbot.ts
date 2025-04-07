@@ -400,18 +400,18 @@ export class ChatbotService {
     switch (intent) {
       case 'greeting':
         return [
-          'Xin chào! Tôi là trợ lý ảo của Web Tool Tracker. Tôi có thể giúp bạn tìm hiểu về dịch vụ Chatbot thông minh, Tự động hóa web và Phát triển phần mềm của chúng tôi. Bạn cần hỗ trợ gì?',
-          'Chào bạn! Rất vui được gặp bạn. Tôi là chatbot của Web Tool Tracker, sẵn sàng hỗ trợ bạn tìm hiểu về các dịch vụ của chúng tôi.',
-          'Xin chào quý khách! Tôi là trợ lý ảo của Web Tool Tracker. Tôi có thể giúp bạn tìm hiểu về các dịch vụ của chúng tôi hoặc giải đáp thắc mắc. Bạn cần hỗ trợ gì?',
-          'Chào mừng bạn đến với Web Tool Tracker! Tôi là trợ lý ảo, sẵn sàng giúp bạn tìm hiểu về các dịch vụ Chatbot AI, Tự động hóa web và Phát triển phần mềm.',
-          'Xin chào! Tôi là chatbot của Web Tool Tracker. Hôm nay tôi có thể giúp gì cho bạn?'
+          '👋 Xin chào! Tôi là trợ lý ảo của TectonicDevs. Tôi có thể giúp bạn tìm hiểu về dịch vụ phát triển website, chatbot thông minh và các giải pháp công nghệ của chúng tôi. Bạn cần hỗ trợ gì?',
+          'Chào bạn! Rất vui được gặp bạn. Tôi là chatbot của TectonicDevs, sẵn sàng hỗ trợ bạn tìm hiểu về các dịch vụ phát triển website, ứng dụng và các công cụ tự động hóa của chúng tôi.',
+          'Xin chào quý khách! Tôi là trợ lý ảo của TectonicDevs. Tôi có thể giúp bạn tìm hiểu về các dịch vụ của chúng tôi hoặc giải đáp thắc mắc. Bạn cần hỗ trợ gì?',
+          'Chào mừng bạn đến với TectonicDevs! Tôi là trợ lý ảo, sẵn sàng giúp bạn tìm hiểu về các dịch vụ phát triển website, chatbot AI và giải pháp công nghệ cho doanh nghiệp.',
+          'Xin chào! Tôi là chatbot của TectonicDevs. Hôm nay tôi có thể giúp gì cho bạn về các dịch vụ công nghệ và phát triển phần mềm của chúng tôi?'
         ];
       
       case 'farewell':
         return [
           'Cảm ơn bạn đã liên hệ với chúng tôi. Hẹn gặp lại và chúc bạn một ngày tốt lành!',
           'Tạm biệt! Rất vui được trò chuyện với bạn. Nếu có thắc mắc gì thêm, đừng ngần ngại quay lại nhé!',
-          'Chào tạm biệt và cảm ơn bạn đã ghé thăm Web Tool Tracker. Chúc bạn một ngày tuyệt vời!',
+          'Chào tạm biệt và cảm ơn bạn đã ghé thăm TectonicDevs. Chúc bạn một ngày tuyệt vời!',
           'Rất vui được hỗ trợ bạn. Nếu cần thêm thông tin, hãy quay lại nhé. Tạm biệt!',
           'Cảm ơn bạn đã dành thời gian trò chuyện. Hẹn gặp lại bạn sớm nhé!'
         ];
@@ -422,7 +422,7 @@ export class ChatbotService {
           'Tôi rất vui được giải đáp thắc mắc của bạn. Bạn muốn hỏi về vấn đề gì?',
           'Tôi đang lắng nghe và sẵn sàng trả lời câu hỏi của bạn. Bạn cần tìm hiểu điều gì?',
           'Tôi có thể giúp bạn trả lời nhiều câu hỏi về dịch vụ của chúng tôi. Bạn muốn biết về vấn đề gì?',
-          'Đừng ngại đặt câu hỏi, tôi sẽ cố gắng giải đáp mọi thắc mắc của bạn về dịch vụ của Web Tool Tracker.'
+          'Đừng ngại đặt câu hỏi, tôi sẽ cố gắng giải đáp mọi thắc mắc của bạn về dịch vụ của TectonicDevs.'
         ];
       
       case 'chatbot_info':
@@ -481,28 +481,28 @@ export class ChatbotService {
       
       case 'company_info':
         return [
-          'Web Tool Tracker là công ty công nghệ chuyên cung cấp giải pháp chatbot thông minh, tự động hóa web và phát triển phần mềm. Chúng tôi thành lập từ năm 2018 với sứ mệnh giúp doanh nghiệp tận dụng công nghệ để tăng hiệu quả hoạt động.',
+          'TectonicDevs là công ty công nghệ chuyên cung cấp giải pháp chatbot thông minh, tự động hóa web và phát triển phần mềm. Chúng tôi thành lập từ năm 2018 với sứ mệnh giúp doanh nghiệp tận dụng công nghệ để tăng hiệu quả hoạt động.',
           'Công ty chúng tôi được thành lập vào năm 2018 bởi đội ngũ kỹ sư phần mềm có hơn 10 năm kinh nghiệm. Chúng tôi chuyên cung cấp các giải pháp công nghệ tiên tiến giúp doanh nghiệp tự động hóa quy trình, cải thiện trải nghiệm khách hàng và tối ưu hóa hoạt động.',
-          'Web Tool Tracker là công ty công nghệ với hơn 20 chuyên gia trong lĩnh vực AI, phát triển phần mềm và tự động hóa. Sứ mệnh của chúng tôi là giúp doanh nghiệp chuyển đổi số hiệu quả với các giải pháp công nghệ tiên tiến.',
-          'Chúng tôi là đội ngũ gồm các kỹ sư, nhà phát triển và chuyên gia AI với đam mê tạo ra các giải pháp công nghệ sáng tạo. Web Tool Tracker được thành lập với mục tiêu giúp các doanh nghiệp vừa và nhỏ tiếp cận với công nghệ tiên tiến với chi phí hợp lý.',
-          'Web Tool Tracker là công ty công nghệ đặt tại Việt Nam, chuyên cung cấp các giải pháp kỹ thuật số. Với đội ngũ kỹ sư tài năng và tầm nhìn đổi mới, chúng tôi đã giúp nhiều doanh nghiệp triển khai thành công các giải pháp công nghệ từ chatbot AI đến hệ thống phần mềm tùy chỉnh.'
+          'TectonicDevs là công ty công nghệ với hơn 20 chuyên gia trong lĩnh vực AI, phát triển phần mềm và tự động hóa. Sứ mệnh của chúng tôi là giúp doanh nghiệp chuyển đổi số hiệu quả với các giải pháp công nghệ tiên tiến.',
+          'Chúng tôi là đội ngũ gồm các kỹ sư, nhà phát triển và chuyên gia AI với đam mê tạo ra các giải pháp công nghệ sáng tạo. TectonicDevs được thành lập với mục tiêu giúp các doanh nghiệp vừa và nhỏ tiếp cận với công nghệ tiên tiến với chi phí hợp lý.',
+          'TectonicDevs là công ty công nghệ đặt tại Việt Nam, chuyên cung cấp các giải pháp kỹ thuật số. Với đội ngũ kỹ sư tài năng và tầm nhìn đổi mới, chúng tôi đã giúp nhiều doanh nghiệp triển khai thành công các giải pháp công nghệ từ chatbot AI đến hệ thống phần mềm tùy chỉnh.'
         ];
       
       case 'contact':
         return [
-          'Bạn có thể liên hệ với chúng tôi qua email info@webtooltracker.com, số điện thoại 0123.456.789 hoặc điền vào form liên hệ trên trang web của chúng tôi.',
-          'Để liên hệ với đội ngũ hỗ trợ của chúng tôi, bạn có thể gọi đến số 0123.456.789, gửi email đến info@webtooltracker.com, hoặc chat trực tiếp trên trang web của chúng tôi trong giờ làm việc.',
+          'Bạn có thể liên hệ với chúng tôi qua email info@tectonicdevs.com, số điện thoại 0123.456.789 hoặc điền vào form liên hệ trên trang web của chúng tôi.',
+          'Để liên hệ với đội ngũ hỗ trợ của chúng tôi, bạn có thể gọi đến số 0123.456.789, gửi email đến info@tectonicdevs.com, hoặc chat trực tiếp trên trang web của chúng tôi trong giờ làm việc.',
           'Phòng kinh doanh của chúng tôi luôn sẵn sàng hỗ trợ bạn qua số điện thoại 0123.456.789. Ngoài ra, bạn cũng có thể liên hệ qua form trên website, email hoặc các kênh mạng xã hội của chúng tôi.',
-          'Bạn có thể liên hệ với chúng tôi qua nhiều kênh khác nhau: điền form liên hệ trên website, gửi email đến info@webtooltracker.com, gọi số 0123.456.789, hoặc nhắn tin qua Zalo/Messenger. Chúng tôi sẽ phản hồi trong vòng 24 giờ.',
-          'Để được tư vấn chi tiết, bạn có thể đặt lịch hẹn với chuyên gia của chúng tôi qua email info@webtooltracker.com hoặc gọi điện đến số 0123.456.789. Chúng tôi luôn sẵn sàng hỗ trợ bạn.'
+          'Bạn có thể liên hệ với chúng tôi qua nhiều kênh khác nhau: điền form liên hệ trên website, gửi email đến info@tectonicdevs.com, gọi số 0123.456.789, hoặc nhắn tin qua Zalo/Messenger. Chúng tôi sẽ phản hồi trong vòng 24 giờ.',
+          'Để được tư vấn chi tiết, bạn có thể đặt lịch hẹn với chuyên gia của chúng tôi qua email info@tectonicdevs.com hoặc gọi điện đến số 0123.456.789. Chúng tôi luôn sẵn sàng hỗ trợ bạn.'
         ];
       
       case 'location':
         return [
           'Văn phòng của chúng tôi đặt tại Tầng 8, Tòa nhà ABC, Quận 1, TP.HCM, Việt Nam. Bạn có thể đến trực tiếp trong giờ làm việc.',
-          'Trụ sở chính của Web Tool Tracker đặt tại Tầng 8, Tòa nhà ABC, số 123 Đường XYZ, Quận 1, TP.HCM. Chúng tôi cũng có văn phòng đại diện tại Hà Nội và Đà Nẵng.',
+          'Trụ sở chính của TectonicDevs đặt tại Tầng 8, Tòa nhà ABC, số 123 Đường XYZ, Quận 1, TP.HCM. Chúng tôi cũng có văn phòng đại diện tại Hà Nội và Đà Nẵng.',
           'Văn phòng chúng tôi nằm ở vị trí trung tâm TP.HCM, tại Tầng 8, Tòa nhà ABC, Quận 1. Bạn có thể dễ dàng đến bằng nhiều phương tiện công cộng hoặc xe cá nhân.',
-          'Văn phòng của Web Tool Tracker đặt tại Tầng 8, Tòa nhà ABC, Quận 1, TP.HCM. Khu vực có nhiều chỗ đỗ xe và thuận tiện di chuyển. Bạn có thể ghé thăm chúng tôi từ 8h30 đến 17h30 các ngày trong tuần.',
+          'Văn phòng của TectonicDevs đặt tại Tầng 8, Tòa nhà ABC, Quận 1, TP.HCM. Khu vực có nhiều chỗ đỗ xe và thuận tiện di chuyển. Bạn có thể ghé thăm chúng tôi từ 8h30 đến 17h30 các ngày trong tuần.',
           'Chúng tôi có văn phòng tại Tầng 8, Tòa nhà ABC, Quận 1, TP.HCM. Nếu bạn muốn đến thăm, vui lòng đặt lịch hẹn trước qua email hoặc điện thoại để chúng tôi có thể phục vụ bạn tốt nhất.'
         ];
       
@@ -526,7 +526,7 @@ export class ChatbotService {
       
       case 'support':
         return [
-          'Chúng tôi cung cấp hỗ trợ kỹ thuật 24/7 cho các vấn đề khẩn cấp và hỗ trợ trong giờ làm việc cho các vấn đề thông thường. Bạn có thể liên hệ qua email support@webtooltracker.com hoặc hotline 0123.456.789.',
+          'Chúng tôi cung cấp hỗ trợ kỹ thuật 24/7 cho các vấn đề khẩn cấp và hỗ trợ trong giờ làm việc cho các vấn đề thông thường. Bạn có thể liên hệ qua email support@tectonicdevs.com hoặc hotline 0123.456.789.',
           'Đội ngũ hỗ trợ kỹ thuật của chúng tôi luôn sẵn sàng giải quyết mọi vấn đề. Chúng tôi cung cấp các gói hỗ trợ khác nhau: Basic (giờ hành chính), Premium (12 giờ/ngày), và Enterprise (24/7) tùy theo nhu cầu của doanh nghiệp.',
           'Chúng tôi cung cấp nhiều kênh hỗ trợ khác nhau: email, điện thoại, chat trực tiếp và hệ thống ticket. Thời gian phản hồi trung bình của chúng tôi là dưới 2 giờ trong giờ làm việc và dưới 8 giờ ngoài giờ làm việc cho các vấn đề khẩn cấp.',
           'Khi bạn sử dụng dịch vụ của chúng tôi, bạn sẽ nhận được hỗ trợ đầy đủ từ đội ngũ kỹ thuật chuyên nghiệp. Chúng tôi cung cấp hướng dẫn sử dụng chi tiết, hỗ trợ qua điện thoại/email, và dịch vụ bảo trì định kỳ để đảm bảo hệ thống của bạn luôn hoạt động ổn định.',
@@ -538,7 +538,7 @@ export class ChatbotService {
           'Chúng tôi rất vui được giới thiệu demo sản phẩm cho bạn. Vui lòng cung cấp thông tin liên hệ qua form trên trang web hoặc gọi điện để đặt lịch demo.',
           'Bạn có thể đăng ký xem demo trực tiếp hoặc online thông qua website của chúng tôi. Sau khi đăng ký, đội ngũ của chúng tôi sẽ liên hệ để sắp xếp thời gian phù hợp cho buổi demo.',
           'Chúng tôi cung cấp các buổi demo miễn phí để giới thiệu về các dịch vụ và giải pháp của chúng tôi. Buổi demo thường kéo dài 30-60 phút và bao gồm phần hỏi đáp. Vui lòng liên hệ với chúng tôi để đặt lịch.',
-          'Để xem demo sản phẩm, bạn có thể đặt lịch qua email info@webtooltracker.com hoặc gọi đến số 0123.456.789. Chúng tôi sẽ chuẩn bị một buổi demo phù hợp với nhu cầu cụ thể của doanh nghiệp bạn.',
+          'Để xem demo sản phẩm, bạn có thể đặt lịch qua email info@tectonicdevs.com hoặc gọi đến số 0123.456.789. Chúng tôi sẽ chuẩn bị một buổi demo phù hợp với nhu cầu cụ thể của doanh nghiệp bạn.',
           'Chúng tôi tổ chức các buổi demo sản phẩm hàng tuần vào thứ Ba và thứ Năm. Ngoài ra, bạn cũng có thể yêu cầu demo riêng theo lịch của bạn. Hãy liên hệ với chúng tôi để biết thêm chi tiết và đăng ký tham gia.'
         ];
       
@@ -573,7 +573,7 @@ export class ChatbotService {
         return [
           'Chúng tôi luôn đánh giá cao phản hồi từ khách hàng. Bạn có thể gửi góp ý hoặc nhận xét qua form trên website, email, hoặc gọi điện trực tiếp. Mọi ý kiến đóng góp sẽ giúp chúng tôi cải thiện dịch vụ tốt hơn.',
           'Phản hồi của khách hàng rất quan trọng đối với chúng tôi. Chúng tôi sử dụng phản hồi để liên tục cải thiện các sản phẩm và dịch vụ. Bạn có thể chia sẻ ý kiến của mình thông qua khảo sát sau dự án, form góp ý trên website hoặc liên hệ trực tiếp với người quản lý dự án.',
-          'Chúng tôi rất mong nhận được phản hồi từ bạn về trải nghiệm với dịch vụ của chúng tôi. Mọi góp ý đều được xem xét nghiêm túc và là động lực để chúng tôi phát triển. Bạn có thể gửi phản hồi qua email feedback@webtooltracker.com hoặc điền vào form góp ý trên trang web.',
+          'Chúng tôi rất mong nhận được phản hồi từ bạn về trải nghiệm với dịch vụ của chúng tôi. Mọi góp ý đều được xem xét nghiêm túc và là động lực để chúng tôi phát triển. Bạn có thể gửi phản hồi qua email feedback@tectonicdevs.com hoặc điền vào form góp ý trên trang web.',
           'Để liên tục cải thiện dịch vụ, chúng tôi rất cần phản hồi của bạn. Bạn có thể đánh giá dịch vụ của chúng tôi thông qua khảo sát hàng quý, gửi email góp ý, hoặc trao đổi trực tiếp với đội ngũ quản lý của chúng tôi.',
           'Chúng tôi xem phản hồi của khách hàng là nguồn thông tin quý giá để cải thiện. Bạn có thể chia sẻ trải nghiệm và đề xuất cải tiến thông qua nhiều kênh: khảo sát trực tuyến, form góp ý, email, hoặc gọi điện trực tiếp. Mọi ý kiến đều được ghi nhận và phản hồi trong thời gian sớm nhất.'
         ];
@@ -589,11 +589,11 @@ export class ChatbotService {
       
       default:
         return [
-          'Cảm ơn bạn đã liên hệ. Tôi có thể giúp bạn tìm hiểu về dịch vụ Chatbot thông minh, Tự động hóa web và Phát triển phần mềm của chúng tôi. Bạn quan tâm đến dịch vụ nào?',
-          'Rất vui được trò chuyện với bạn. Tôi có thể cung cấp thông tin về các dịch vụ của Web Tool Tracker. Bạn muốn tìm hiểu về vấn đề gì?',
-          'Tôi là trợ lý ảo của Web Tool Tracker. Tôi có thể giúp bạn tìm hiểu về dịch vụ của chúng tôi hoặc kết nối bạn với nhân viên hỗ trợ. Bạn cần giúp đỡ gì?',
-          'Chào mừng đến với Web Tool Tracker! Tôi có thể giúp bạn tìm hiểu thêm về các giải pháp công nghệ của chúng tôi. Bạn quan tâm đến lĩnh vực nào?',
-          'Cảm ơn bạn đã liên hệ với Web Tool Tracker. Tôi có thể cung cấp thông tin về dịch vụ, giá cả, thời gian hoặc kết nối bạn với đội ngũ tư vấn. Bạn cần hỗ trợ gì?'
+          'Cảm ơn bạn đã liên hệ. Tôi có thể giúp bạn tìm hiểu về dịch vụ phát triển website, chatbot thông minh và các giải pháp công nghệ của chúng tôi. Bạn quan tâm đến dịch vụ nào?',
+          'Rất vui được trò chuyện với bạn. Tôi có thể cung cấp thông tin về các dịch vụ của TectonicDevs. Bạn muốn tìm hiểu về vấn đề gì?',
+          'Tôi là trợ lý ảo của TectonicDevs. Tôi có thể giúp bạn tìm hiểu về dịch vụ của chúng tôi hoặc kết nối bạn với nhân viên hỗ trợ. Bạn cần giúp đỡ gì?',
+          'Chào mừng đến với TectonicDevs! Tôi có thể giúp bạn tìm hiểu thêm về các giải pháp công nghệ của chúng tôi. Bạn quan tâm đến lĩnh vực nào?',
+          'Cảm ơn bạn đã liên hệ với TectonicDevs. Tôi có thể cung cấp thông tin về dịch vụ, giá cả, thời gian hoặc kết nối bạn với đội ngũ tư vấn. Bạn cần hỗ trợ gì?'
         ];
     }
   }

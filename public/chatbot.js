@@ -95,9 +95,10 @@ class Chatbot {
     // Lưu sessionId vào localStorage
     localStorage.setItem('chatbot_session_id', this.sessionId);
       
-    // Load tin nhắn và hiển thị thông báo chào mừng
+    // Load tin nhắn từ server
     await this.loadMessages();
-      this.addMessage('Xin chào! Tôi là trợ lý ảo của Coding Team. Tôi có thể giúp gì cho bạn?', 'bot');
+    
+    // Không thêm tin nhắn chào mừng ở đây vì tin nhắn chào mừng đã được thêm từ server
   }
   
   async loadMessages() {
@@ -144,7 +145,7 @@ class Chatbot {
     const header = document.createElement('div');
     header.className = 'chat-header';
     header.innerHTML = `
-      <h3>Trợ lý Coding Team</h3>
+      <h3>Trợ lý TectonicDevs</h3>
       <div class="controls">
         <button class="minimize-btn">−</button>
       </div>
@@ -421,7 +422,7 @@ class Chatbot {
   updateUIForBotSupport() {
     // Khôi phục giao diện bot
     const header = this.container.querySelector('.chat-header h3');
-    header.innerHTML = '<i class="fas fa-robot"></i> Trợ lý Coding Team';
+    header.innerHTML = '<i class="fas fa-robot"></i> Trợ lý TectonicDevs';
     
     const statusIndicator = this.container.querySelector('.status-indicator');
     if (statusIndicator) {

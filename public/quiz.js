@@ -240,6 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
             finalScoreSpan.textContent = score;
             // Apply pulse animation to voucher
             document.querySelector('.voucher-code').classList.add('pulse-animation');
+            
+            // Create confetti celebration effect
+            createConfetti();
         } else {
             successResults.style.display = 'none';
             failureResults.style.display = 'block';
@@ -438,5 +441,47 @@ document.addEventListener('DOMContentLoaded', function() {
             // Fallback - Open new window with share link
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
         }
+    }
+    
+    // Function to create confetti celebration
+    function createConfetti() {
+        const confettiContainer = document.querySelector('.confetti-container');
+        const colors = ['#4a89dc', '#3cb878', '#f39c12', '#9b59b6', '#e74c3c', '#1abc9c'];
+        const confettiCount = 150;
+        
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti-piece';
+            
+            // Random position, rotation, color and size
+            const size = Math.random() * 10 + 5;
+            const positionLeft = Math.random() * 100;
+            const positionTop = Math.random() * 100;
+            const rotation = Math.random() * 360;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Add styles
+            confetti.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background-color: ${color};
+                top: ${positionTop}%;
+                left: ${positionLeft}%;
+                opacity: 0;
+                transform: rotate(${rotation}deg);
+                animation: confetti-fall 3s ease-in-out forwards;
+                animation-delay: ${Math.random() * 2}s;
+            `;
+            
+            confettiContainer.appendChild(confetti);
+        }
+        
+        // Clean up confetti after animation completes
+        setTimeout(() => {
+            while (confettiContainer.firstChild) {
+                confettiContainer.removeChild(confettiContainer.firstChild);
+            }
+        }, 5000);
     }
 }); 

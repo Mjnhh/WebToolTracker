@@ -7,33 +7,295 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="quiz-style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             padding-top: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0f172a;
+            overflow-x: hidden;
+            color: #f8fafc;
         }
         .back-to-site {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 100;
-            background-color: rgba(52, 152, 219, 0.8);
+            background-color: rgba(82, 113, 255, 0.3);
             color: white;
-            padding: 10px 15px;
+            padding: 12px 20px;
             border-radius: 50px;
             display: flex;
             align-items: center;
             text-decoration: none;
             font-weight: 600;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(82, 113, 255, 0.5);
         }
         .back-to-site:hover {
-            background-color: rgba(52, 152, 219, 1);
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            background-color: rgba(82, 113, 255, 0.5);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(82, 113, 255, 0.5);
         }
         .back-to-site i {
             margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        /* Stars shadows variables */
+        :root {
+            --stars-shadow: 
+                1px 1px #fff, 2px 2px #fff, 3px 3px #fff, 4px 4px #fff, 5px 5px #fff,
+                6px 6px #fff, 7px 7px #fff, 8px 8px #fff, 9px 9px #fff, 10px 10px #fff,
+                11px 11px #fff, 12px 12px #fff, 13px 13px #fff, 14px 14px #fff, 15px 15px #fff,
+                16px 16px #fff, 17px 17px #fff, 18px 18px #fff, 19px 19px #fff, 20px 20px #fff,
+                21px 21px #fff, 22px 22px #fff, 23px 23px #fff, 24px 24px #fff, 25px 25px #fff,
+                26px 26px #fff, 27px 27px #fff, 28px 28px #fff, 29px 29px #fff, 30px 30px #fff,
+                31px 31px #fff, 32px 32px #fff, 33px 33px #fff, 34px 34px #fff, 35px 35px #fff,
+                36px 36px #fff, 37px 37px #fff, 38px 38px #fff, 39px 39px #fff, 40px 40px #fff,
+                41px 41px #fff, 42px 42px #fff, 43px 43px #fff, 44px 44px #fff, 45px 45px #fff,
+                46px 46px #fff, 47px 47px #fff, 48px 48px #fff, 49px 49px #fff, 50px 50px #fff,
+                51px 51px #fff, 52px 52px #fff, 53px 53px #fff, 54px 54px #fff, 55px 55px #fff,
+                56px 56px #fff, 57px 57px #fff, 58px 58px #fff, 59px 59px #fff, 60px 60px #fff,
+                61px 61px #fff, 62px 62px #fff, 63px 63px #fff, 64px 64px #fff, 65px 65px #fff,
+                66px 66px #fff, 67px 67px #fff, 68px 68px #fff, 69px 69px #fff, 70px 70px #fff;
+                
+            --stars-shadow-med: 
+                1px 1px rgba(255, 255, 255, 0.9), 2px 2px rgba(255, 255, 255, 0.9),
+                3px 3px rgba(255, 255, 255, 0.9), 4px 4px rgba(255, 255, 255, 0.9),
+                5px 5px rgba(255, 255, 255, 0.9), 6px 6px rgba(255, 255, 255, 0.9),
+                7px 7px rgba(255, 255, 255, 0.9), 8px 8px rgba(255, 255, 255, 0.9),
+                9px 9px rgba(255, 255, 255, 0.9), 10px 10px rgba(255, 255, 255, 0.9),
+                11px 11px rgba(255, 255, 255, 0.9), 12px 12px rgba(255, 255, 255, 0.9),
+                13px 13px rgba(255, 255, 255, 0.9), 14px 14px rgba(255, 255, 255, 0.9),
+                15px 15px rgba(255, 255, 255, 0.9), 16px 16px rgba(255, 255, 255, 0.9),
+                17px 17px rgba(255, 255, 255, 0.9), 18px 18px rgba(255, 255, 255, 0.9),
+                19px 19px rgba(255, 255, 255, 0.9), 20px 20px rgba(255, 255, 255, 0.9),
+                21px 21px rgba(255, 255, 255, 0.9), 22px 22px rgba(255, 255, 255, 0.9),
+                23px 23px rgba(255, 255, 255, 0.9), 24px 24px rgba(255, 255, 255, 0.9),
+                25px 25px rgba(255, 255, 255, 0.9), 26px 26px rgba(255, 255, 255, 0.9),
+                27px 27px rgba(255, 255, 255, 0.9), 28px 28px rgba(255, 255, 255, 0.9),
+                29px 29px rgba(255, 255, 255, 0.9), 30px 30px rgba(255, 255, 255, 0.9),
+                31px 31px rgba(255, 255, 255, 0.9), 32px 32px rgba(255, 255, 255, 0.9),
+                33px 33px rgba(255, 255, 255, 0.9), 34px 34px rgba(255, 255, 255, 0.9),
+                35px 35px rgba(255, 255, 255, 0.9);
+                
+            --stars-shadow-big: 
+                1px 1px rgba(255, 255, 255, 0.8), 2px 2px rgba(255, 255, 255, 0.8),
+                3px 3px rgba(255, 255, 255, 0.8), 4px 4px rgba(255, 255, 255, 0.8),
+                5px 5px rgba(255, 255, 255, 0.8), 6px 6px rgba(255, 255, 255, 0.8),
+                7px 7px rgba(255, 255, 255, 0.8), 8px 8px rgba(255, 255, 255, 0.8),
+                9px 9px rgba(255, 255, 255, 0.8), 10px 10px rgba(255, 255, 255, 0.8),
+                11px 11px rgba(255, 255, 255, 0.8), 12px 12px rgba(255, 255, 255, 0.8),
+                13px 13px rgba(255, 255, 255, 0.8), 14px 14px rgba(255, 255, 255, 0.8),
+                15px 15px rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Particle background */
+        .particles-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        /* Float shapes for additional effect */
+        .float-shape {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            filter: blur(15px);
+            z-index: 0;
+        }
+        
+        .shape1 {
+            width: 300px;
+            height: 300px;
+            top: 10%;
+            left: 10%;
+            animation: float 12s ease-in-out infinite;
+            background: radial-gradient(circle at center, rgba(82, 113, 255, 0.2) 0%, transparent 70%);
+        }
+        
+        .shape2 {
+            width: 200px;
+            height: 200px;
+            bottom: 20%;
+            right: 15%;
+            animation: float 10s ease-in-out infinite 1s;
+            background: radial-gradient(circle at center, rgba(0, 212, 255, 0.2) 0%, transparent 70%);
+        }
+        
+        .shape3 {
+            width: 150px;
+            height: 150px;
+            bottom: 30%;
+            left: 25%;
+            animation: float 8s ease-in-out infinite 2s;
+            background: radial-gradient(circle at center, rgba(255, 111, 145, 0.2) 0%, transparent 70%);
+        }
+        
+        /* Floating animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        /* Modern glassy cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Aesthetic gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #2c3e50, #4a69bd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        
+        /* Floating animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .float-element {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        /* Tech Icons Animation */
+        .tech-icons-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .tech-icon {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.2);
+            opacity: 0.8;
+            z-index: 0;
+        }
+        
+        .tech-icon:nth-child(1) {
+            top: 10%;
+            left: 10%;
+            font-size: 3rem;
+            animation: floatingIcon 8s ease-in-out infinite, rotateIcon 15s linear infinite;
+        }
+        
+        .tech-icon:nth-child(2) {
+            top: 20%;
+            right: 15%;
+            font-size: 2.5rem;
+            animation: floatingIcon 10s ease-in-out infinite 1s, rotateIcon 20s linear infinite;
+        }
+        
+        .tech-icon:nth-child(3) {
+            bottom: 15%;
+            left: 20%;
+            font-size: 3.5rem;
+            animation: floatingIcon 12s ease-in-out infinite 2s, rotateIcon 18s linear infinite;
+        }
+        
+        .tech-icon:nth-child(4) {
+            top: 40%;
+            left: 25%;
+            font-size: 2rem;
+            animation: floatingIcon 9s ease-in-out infinite 0.5s, rotateIcon 14s linear infinite;
+        }
+        
+        .tech-icon:nth-child(5) {
+            top: 60%;
+            right: 30%;
+            font-size: 3rem;
+            animation: floatingIcon 11s ease-in-out infinite 1.5s, rotateIcon 17s linear infinite;
+        }
+        
+        .tech-icon:nth-child(6) {
+            bottom: 10%;
+            right: 10%;
+            font-size: 2.8rem;
+            animation: floatingIcon 9.5s ease-in-out infinite 0.8s, rotateIcon 16s linear infinite;
+        }
+        
+        .tech-icon:nth-child(7) {
+            top: 5%;
+            right: 5%;
+            font-size: 2.3rem;
+            animation: floatingIcon 10.5s ease-in-out infinite 1.2s, rotateIcon 19s linear infinite;
+        }
+        
+        .tech-icon:nth-child(8) {
+            top: 80%;
+            left: 40%;
+            font-size: 2.7rem;
+            animation: floatingIcon 11.5s ease-in-out infinite 1.7s, rotateIcon 21s linear infinite;
+        }
+        
+        .tech-icon:nth-child(9) {
+            top: 30%;
+            left: 80%;
+            font-size: 2.2rem;
+            animation: floatingIcon 8.5s ease-in-out infinite 0.3s, rotateIcon 13s linear infinite;
+        }
+        
+        .tech-icon:nth-child(10) {
+            top: 70%;
+            left: 10%;
+            font-size: 2.6rem;
+            animation: floatingIcon 12.5s ease-in-out infinite 2.1s, rotateIcon 16s linear infinite;
+        }
+        
+        .tech-icon:nth-child(11) {
+            top: 40%;
+            right: 60%;
+            font-size: 2.4rem;
+            animation: floatingIcon 9.8s ease-in-out infinite 1.3s, rotateIcon 15s linear infinite;
+        }
+        
+        .tech-icon:nth-child(12) {
+            bottom: 30%;
+            right: 20%;
+            font-size: 3.2rem;
+            animation: floatingIcon 10.2s ease-in-out infinite 0.6s, rotateIcon 22s linear infinite;
+        }
+        
+        @keyframes floatingIcon {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(20px, -20px); }
+            100% { transform: translate(0, 0); }
+        }
+        
+        @keyframes rotateIcon {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Make sure hero content appears above the floating elements */
+        .hero-content {
+            position: relative;
+            z-index: 2;
         }
     </style>
 </head>
@@ -42,28 +304,48 @@
         <i class="fas fa-arrow-left"></i> Quay lại trang chủ
     </a>
 
-    <!-- Hero Section -->
+    <!-- Hero Section with space theme -->
     <section class="quiz-hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="animated fadeInDown">Quiz Kiến Thức Công Nghệ</h1>
-                <h2 class="animated fadeIn">Thử thách trí tuệ, nhận quà hấp dẫn!</h2>
-                <p class="animated fadeInUp">Thử thách bản thân với bài quiz về công nghệ. Trả lời đúng đủ số câu hỏi để nhận voucher giảm giá đặc biệt cho dịch vụ của chúng tôi.</p>
-                <a href="#quiz-section" class="btn btn-primary animated fadeInUp">Bắt Đầu Ngay</a>
+        <div id="particles-js"></div>
+        
+        <div class="stars"></div>
+        <div class="stars2"></div>
+        <div class="stars3"></div>
+        
+        <div class="planet planet1"></div>
+        <div class="planet planet2"></div>
+        <div class="planet planet3"></div>
+        
+        <div class="nebula nebula1"></div>
+        <div class="nebula nebula2"></div>
+        
+        <div class="hero-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto text-center">
+                        <h1 class="hero-title">Kiểm Tra Kiến Thức IT</h1>
+                        <p class="hero-subtitle">Trả lời các câu hỏi để kiểm tra kiến thức và nhận voucher</p>
+                    </div>
+                </div>
             </div>
         </div>
+        
+        <!-- Floating shapes (keeping these for extra effect in space theme) -->
+        <div class="float-shape shape1"></div>
+        <div class="float-shape shape2"></div>
+        <div class="float-shape shape3"></div>
     </section>
 
-    <!-- Quiz Section -->
+    <!-- Quiz Section with modern UI -->
     <section id="quiz-section" class="quiz-container">
         <div class="container">
             <div class="section-header">
                 <div class="subtitle">Thử Thách Bản Thân</div>
-                <h2>Quiz Kiến Thức <span>Công Nghệ</span></h2>
+                <h2>Quiz Kiến Thức <span class="gradient-text">Công Nghệ</span></h2>
                 <p>Trả lời đúng 10 câu hỏi để mở khóa voucher giảm giá đặc biệt!</p>
             </div>
 
-            <div class="quiz-wrapper">
+            <div class="quiz-wrapper glass-card">
                 <!-- Quiz Welcome Screen -->
                 <div id="quiz-welcome" class="quiz-screen active">
                     <div class="quiz-info">
@@ -89,7 +371,9 @@
                             </div>
                         </div>
                     </div>
-                    <button id="start-quiz" class="btn btn-primary">Bắt Đầu Quiz</button>
+                    <button id="start-quiz" class="btn btn-primary pulse-animation">
+                        <i class="fas fa-play-circle"></i> Bắt Đầu Quiz
+                    </button>
                 </div>
 
                 <!-- Quiz Questions Screen -->
@@ -115,34 +399,48 @@
                     </div>
                     
                     <div class="quiz-controls">
-                        <button id="prev-btn" class="btn btn-outline" disabled>Trước</button>
-                        <button id="next-btn" class="btn btn-primary">Tiếp</button>
-                        <button id="submit-btn" class="btn btn-primary" style="display: none;">Nộp Bài</button>
+                        <button id="prev-btn" class="btn btn-outline" disabled>
+                            <i class="fas fa-arrow-left"></i> Trước
+                        </button>
+                        <button id="next-btn" class="btn btn-primary">
+                            Tiếp <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button id="submit-btn" class="btn btn-primary" style="display: none;">
+                            <i class="fas fa-paper-plane"></i> Nộp Bài
+                        </button>
                     </div>
                 </div>
 
-                <!-- Quiz Results Screen -->
+                <!-- Quiz Results Screen - Success -->
                 <div id="quiz-results" class="quiz-screen">
                     <div id="results-success" class="results-container">
                         <div class="result-icon success">
                             <i class="fas fa-trophy"></i>
                         </div>
                         <h2>Chúc Mừng!</h2>
+                        <div class="confetti-container"></div>
                         <p class="score-text">Bạn đã đạt <span id="final-score">0</span> trên 10 câu hỏi</p>
-                        <div class="voucher-container">
-                            <h3>Voucher Giảm Giá Của Bạn</h3>
+                        <div class="voucher-container glass-card">
+                            <h3><i class="fas fa-gift"></i> Voucher Giảm Giá Của Bạn</h3>
                             <div class="voucher">
                                 <div class="voucher-code" id="voucher-code">TECH25OFF</div>
-                                <button id="copy-voucher" class="copy-btn"><i class="fas fa-copy"></i></button>
+                                <button id="copy-voucher" class="copy-btn" title="Sao chép mã voucher">
+                                    <i class="fas fa-copy"></i>
+                                </button>
                             </div>
                             <p class="voucher-info">Sử dụng mã này để được giảm 25% cho dịch vụ tiếp theo của chúng tôi!</p>
                         </div>
                         <div class="result-buttons">
-                            <button id="view-answers" class="btn btn-outline">Xem Lại Đáp Án</button>
-                            <button id="share-results" class="btn btn-primary">Chia Sẻ Kết Quả</button>
+                            <button id="view-answers" class="btn btn-outline">
+                                <i class="fas fa-list-check"></i> Xem Lại Đáp Án
+                            </button>
+                            <button id="share-results" class="btn btn-primary">
+                                <i class="fas fa-share-nodes"></i> Chia Sẻ Kết Quả
+                            </button>
                         </div>
                     </div>
                     
+                    <!-- Quiz Results Screen - Failure -->
                     <div id="results-failure" class="results-container" style="display: none;">
                         <div class="result-icon failure">
                             <i class="fas fa-times-circle"></i>
@@ -151,24 +449,132 @@
                         <p class="score-text">Bạn đã đạt <span id="final-score-failure">0</span> trên 10 câu hỏi</p>
                         <p class="encourage-text">Bạn cần đạt ít nhất 7 câu đúng để nhận voucher.</p>
                         <div class="result-buttons">
-                            <button id="view-answers-failure" class="btn btn-outline">Xem Lại Đáp Án</button>
-                            <button id="retry-quiz" class="btn btn-primary">Thử Lại</button>
+                            <button id="view-answers-failure" class="btn btn-outline">
+                                <i class="fas fa-list-check"></i> Xem Lại Đáp Án
+                            </button>
+                            <button id="retry-quiz" class="btn btn-primary">
+                                <i class="fas fa-redo"></i> Thử Lại
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quiz Review Screen -->
                 <div id="quiz-review" class="quiz-screen">
-                    <h2>Đáp Án Của Bạn</h2>
+                    <h2><i class="fas fa-clipboard-check"></i> Đáp Án Của Bạn</h2>
                     <div class="review-container">
                         <!-- Nội dung xem lại sẽ được thêm vào đây bằng JavaScript -->
                     </div>
-                    <button id="back-to-results" class="btn btn-primary">Quay Lại Kết Quả</button>
+                    <button id="back-to-results" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Quay Lại Kết Quả
+                    </button>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Particle JS and other scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        // Khởi tạo particles cho nền quiz hero
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof particlesJS !== 'undefined') {
+                particlesJS('particles-js', {
+                    particles: {
+                        number: { value: 50, density: { enable: true, value_area: 1200 } },
+                        color: { value: ["#ffffff", "#d1b3ff", "#99ffff", "#ffb3ff", "#c7d5ff"] },
+                        shape: { 
+                            type: "circle",
+                            stroke: { width: 0, color: "#000000" },
+                            polygon: { nb_sides: 5 }
+                        },
+                        opacity: { 
+                            value: 0.8, 
+                            random: true, 
+                            anim: { 
+                                enable: true, 
+                                speed: 0.2, 
+                                opacity_min: 0.1, 
+                                sync: false 
+                            } 
+                        },
+                        size: { 
+                            value: 2, 
+                            random: true, 
+                            anim: { 
+                                enable: true, 
+                                speed: 0.5, 
+                                size_min: 0.5, 
+                                sync: false 
+                            } 
+                        },
+                        line_linked: { 
+                            enable: false
+                        },
+                        move: { 
+                            enable: true, 
+                            speed: 0.8, 
+                            direction: "none", 
+                            random: true, 
+                            straight: false, 
+                            out_mode: "out", 
+                            bounce: false,
+                            attract: { enable: false, rotateX: 600, rotateY: 1200 }
+                        }
+                    },
+                    interactivity: {
+                        detect_on: "canvas",
+                        events: { 
+                            onhover: { enable: true, mode: "bubble" }, 
+                            onclick: { enable: false, mode: "push" },
+                            resize: true
+                        },
+                        modes: { 
+                            grab: { distance: 140, line_linked: { opacity: 0.8 } },
+                            bubble: { distance: 150, size: 4, duration: 2, opacity: 0.8, speed: 3 }, 
+                            repulse: { distance: 150, duration: 0.4 },
+                            push: { particles_nb: 4 }, 
+                            remove: { particles_nb: 2 } 
+                        }
+                    },
+                    retina_detect: true
+                });
+            }
+            
+            // Tạo hiệu ứng sao nhấp nháy ngẫu nhiên
+            function twinkleStars() {
+                const stars = document.querySelectorAll('.stars, .stars2, .stars3');
+                
+                stars.forEach(starLayer => {
+                    const opacity = 0.6 + Math.random() * 0.4; // 0.6 to 1
+                    starLayer.style.opacity = opacity;
+                });
+                
+                setTimeout(twinkleStars, 1000 + Math.random() * 1500); // 1-2.5 seconds
+            }
+            
+            // Tạo hiệu ứng cho các hành tinh và sương mù
+            function animateSpaceElements() {
+                const planets = document.querySelectorAll('.planet');
+                const nebulas = document.querySelectorAll('.nebula');
+                
+                planets.forEach(planet => {
+                    const rotate = -2 + Math.random() * 4; // -2 to 2 degrees
+                    planet.style.transform = `rotate(${rotate}deg)`;
+                });
+                
+                nebulas.forEach(nebula => {
+                    const scale = 0.95 + Math.random() * 0.1; // 0.95 to 1.05
+                    nebula.style.transform = `scale(${scale})`;
+                });
+                
+                setTimeout(animateSpaceElements, 3000 + Math.random() * 2000); // 3-5 seconds
+            }
+            
+            twinkleStars();
+            animateSpaceElements();
+        });
+    </script>
     <script src="quiz.js"></script>
 </body>
 </html> 

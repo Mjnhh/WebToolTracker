@@ -883,6 +883,11 @@ function setupTabNavigation() {
           const period = statsFilter ? statsFilter.value : 'today';
           fetchStats(period);
         }
+        
+        // Nếu chuyển sang tab mẫu câu, khởi tạo các sự kiện mẫu câu
+        if (targetSection === 'templates') {
+          setupTemplates();
+        }
       }
     });
   });
@@ -1448,51 +1453,155 @@ function showNotification(message, type = 'info') {
 
 // Thiết lập mẫu câu trả lời
 function setupTemplates() {
+  console.log('Thiết lập các sự kiện cho mẫu câu...');
+  
   // Sự kiện khi nhấp vào mẫu câu
   const templateItems = document.querySelectorAll('.template-item .template-content');
-  templateItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const templateText = item.textContent.trim();
-      insertTemplate(templateText);
+  
+  if (templateItems.length > 0) {
+    console.log(`Tìm thấy ${templateItems.length} mẫu câu`);
+    
+    templateItems.forEach(item => {
+      // Xóa sự kiện cũ (nếu có) để tránh trùng lặp
+      item.removeEventListener('click', templateClickHandler);
+      
+      // Thêm sự kiện mới
+      item.addEventListener('click', templateClickHandler);
     });
-  });
+  } else {
+    console.log('Không tìm thấy mẫu câu nào');
+  }
   
   // Nút thêm mẫu mới
   const addTemplateBtn = document.getElementById('add-template-btn');
   if (addTemplateBtn) {
-    addTemplateBtn.addEventListener('click', () => {
-      // Đây là nơi bạn sẽ hiển thị modal để thêm mẫu mới
-      alert('Tính năng đang phát triển');
-    });
+    // Xóa sự kiện cũ
+    addTemplateBtn.removeEventListener('click', addTemplateHandler);
+    
+    // Thêm sự kiện mới
+    addTemplateBtn.addEventListener('click', addTemplateHandler);
   }
   
   // Nút sửa mẫu
   const editBtns = document.querySelectorAll('.template-edit-btn');
-  editBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const templateItem = btn.closest('.template-item');
-      const templateContent = templateItem.querySelector('.template-content p').textContent;
-      // Đây là nơi bạn sẽ hiển thị modal để sửa mẫu
-      alert(`Sửa mẫu: ${templateContent}`);
+  if (editBtns.length > 0) {
+    editBtns.forEach(btn => {
+      // Xóa sự kiện cũ
+      btn.removeEventListener('click', editTemplateHandler);
+      
+      // Thêm sự kiện mới
+      btn.addEventListener('click', editTemplateHandler);
     });
-  });
+  }
   
   // Nút xóa mẫu
   const deleteBtns = document.querySelectorAll('.template-delete-btn');
-  deleteBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (confirm('Bạn có chắc muốn xóa mẫu này không?')) {
-        const templateItem = btn.closest('.template-item');
-        templateItem.remove();
-      }
+  if (deleteBtns.length > 0) {
+    deleteBtns.forEach(btn => {
+      // Xóa sự kiện cũ
+      btn.removeEventListener('click', deleteTemplateHandler);
+      
+      // Thêm sự kiện mới
+      btn.addEventListener('click', deleteTemplateHandler);
     });
-  });
+  }
+  
+  // Đồng bộ mẫu câu với câu trả lời nhanh
+  syncTemplates();
+}
+
+// Xử lý sự kiện click vào mẫu câu
+function templateClickHandler(event) {
+  console.log('Mẫu câu được click');
+  const templateContent = event.currentTarget.querySelector('p')?.textContent || event.currentTarget.textContent;
+  insertTemplate(templateContent.trim());
+}
+
+// Xử lý thêm mẫu mới
+function addTemplateHandler() {
+  console.log('Thêm mẫu mới được click');
+  
+  // Tạo mẫu câu mới với prompt đơn giản
+  const newTemplateContent = prompt('Nhập nội dung mẫu câu mới:');
+  
+  if (newTemplateContent && newTemplateContent.trim()) {
+    const templatesContainer = document.querySelector('.templates-list');
+    if (templatesContainer) {
+      // Tạo phần tử mới
+      const newTemplate = document.createElement('div');
+      newTemplate.className = 'template-item';
+      newTemplate.innerHTML = `
+        <div class="template-content">
+          <p>${newTemplateContent.trim()}</p>
+        </div>
+        <div class="template-actions">
+          <button class="template-edit-btn"><i class="fas fa-edit"></i></button>
+          <button class="template-delete-btn"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
+      
+      // Thêm vào danh sách
+      templatesContainer.appendChild(newTemplate);
+      
+      // Thiết lập lại sự kiện
+      setupTemplates();
+      
+      // Đồng bộ với câu trả lời nhanh
+      syncTemplates();
+      
+      // Thông báo thành công
+      showNotification('Đã thêm mẫu câu mới', 'success');
+    }
+  }
+}
+
+// Xử lý sửa mẫu
+function editTemplateHandler(event) {
+  event.stopPropagation();
+  console.log('Sửa mẫu được click');
+  
+  const templateItem = event.currentTarget.closest('.template-item');
+  const templateContentElement = templateItem.querySelector('.template-content p');
+  const currentContent = templateContentElement?.textContent.trim() || '';
+  
+  // Lấy nội dung mới
+  const newContent = prompt('Chỉnh sửa mẫu câu:', currentContent);
+  
+  if (newContent !== null && templateContentElement) {
+    templateContentElement.textContent = newContent.trim();
+    
+    // Đồng bộ với câu trả lời nhanh
+    syncTemplates();
+    
+    // Thông báo thành công
+    showNotification('Cập nhật mẫu câu thành công', 'success');
+  }
+}
+
+// Xử lý xóa mẫu
+function deleteTemplateHandler(event) {
+  event.stopPropagation();
+  console.log('Xóa mẫu được click');
+  
+  if (confirm('Bạn có chắc muốn xóa mẫu này không?')) {
+    const templateItem = event.currentTarget.closest('.template-item');
+    
+    if (templateItem) {
+      templateItem.remove();
+      
+      // Đồng bộ với câu trả lời nhanh
+      syncTemplates();
+      
+      // Thông báo thành công
+      showNotification('Đã xóa mẫu câu', 'info');
+    }
+  }
 }
 
 // Chèn mẫu câu vào ô nhập tin nhắn
 function insertTemplate(text) {
+  console.log('Chèn mẫu câu:', text);
+  
   const chatInput = document.getElementById('chat-input');
   if (chatInput) {
     // Thay thế các biến trong mẫu
@@ -1500,11 +1609,31 @@ function insertTemplate(text) {
     
     // Thay thế ${name} bằng tên nhân viên
     if (currentUser) {
-      processedText = processedText.replace('${name}', currentUser.name || currentUser.username);
+      processedText = processedText.replace(/\${name}/g, currentUser.name || currentUser.username);
     }
+    
+    // Thay thế ${time} bằng thời gian hiện tại
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                   now.getMinutes().toString().padStart(2, '0');
+    processedText = processedText.replace(/\${time}/g, timeStr);
+    
+    // Thay thế ${date} bằng ngày hiện tại
+    const dateStr = now.getDate().toString().padStart(2, '0') + '/' + 
+                   (now.getMonth() + 1).toString().padStart(2, '0') + '/' + 
+                   now.getFullYear();
+    processedText = processedText.replace(/\${date}/g, dateStr);
     
     chatInput.value = processedText;
     chatInput.focus();
+    
+    // Hiệu ứng làm nổi bật ô nhập liệu
+    chatInput.classList.add('highlight-input');
+    setTimeout(() => {
+      chatInput.classList.remove('highlight-input');
+    }, 300);
+  } else {
+    showNotification('Vui lòng chọn một phiên chat trước', 'warning');
   }
 }
 
@@ -1751,8 +1880,9 @@ function selectSession(sessionId) {
             <span class="session-badge">Phiên ${sessionId.substr(0, 8)}...</span>
           </div>
           <div class="chat-header-actions">
-            <button id="end-session-btn" class="chat-header-button end-session" title="Kết thúc phiên">
+            <button id="end-session-btn" class="chat-header-button end-session-btn" title="Kết thúc phiên">
               <i class="fas fa-times-circle"></i>
+              <span>Kết thúc phiên</span>
             </button>
           </div>
         </div>
@@ -1764,10 +1894,10 @@ function selectSession(sessionId) {
           </button>
         </div>
         <div class="quick-responses">
-          <div class="quick-response-item">Xin chào!</div>
-          <div class="quick-response-item">Tôi có thể giúp gì cho bạn?</div>
-          <div class="quick-response-item">Vui lòng đợi trong giây lát.</div>
-          <div class="quick-response-item">Cảm ơn bạn đã liên hệ với chúng tôi.</div>
+          <div class="quick-response-item">Xin chào! Tôi là ${name} từ bộ phận hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?</div>
+          <div class="quick-response-item">Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ xem xét vấn đề này và phản hồi sớm nhất có thể.</div>
+          <div class="quick-response-item">Bạn có thể cung cấp thêm thông tin chi tiết về vấn đề bạn đang gặp phải không?</div>
+          <div class="quick-response-item">Vui lòng đợi trong giây lát, tôi đang kiểm tra thông tin.</div>
         </div>
       </div>
     `;
@@ -1826,14 +1956,64 @@ function setupQuickResponses() {
   const quickResponseItems = document.querySelectorAll('.quick-response-item');
   if (quickResponseItems) {
     quickResponseItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const chatInput = document.getElementById('chat-input');
-        if (chatInput) {
-          chatInput.value = item.textContent;
-          chatInput.focus();
-        }
-      });
+      // Xóa sự kiện cũ nếu có
+      item.removeEventListener('click', quickResponseClickHandler);
+      
+      // Thêm sự kiện mới
+      item.addEventListener('click', quickResponseClickHandler);
     });
+  }
+  
+  // Thêm nút để mở tab mẫu câu
+  const quickResponsesContainer = document.querySelector('.quick-responses');
+  if (quickResponsesContainer && !document.getElementById('show-templates-btn')) {
+    const showTemplatesBtn = document.createElement('button');
+    showTemplatesBtn.id = 'show-templates-btn';
+    showTemplatesBtn.className = 'quick-response-more';
+    showTemplatesBtn.innerHTML = '<i class="fas fa-ellipsis-h"></i> Xem thêm mẫu câu';
+    showTemplatesBtn.addEventListener('click', () => {
+      // Chuyển sang tab mẫu câu
+      const templatesMenuItem = document.querySelector('.menu-item[data-section="templates"]');
+      if (templatesMenuItem) {
+        templatesMenuItem.click();
+      }
+    });
+    quickResponsesContainer.appendChild(showTemplatesBtn);
+  }
+}
+
+// Xử lý sự kiện khi click vào câu trả lời nhanh
+function quickResponseClickHandler(event) {
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    // Lấy nội dung và xử lý các biến
+    let content = event.currentTarget.textContent;
+    
+    // Thay thế ${name} bằng tên nhân viên
+    if (currentUser) {
+      content = content.replace(/\${name}/g, currentUser.name || currentUser.username);
+    }
+    
+    // Thay thế ${time} bằng thời gian hiện tại
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                   now.getMinutes().toString().padStart(2, '0');
+    content = content.replace(/\${time}/g, timeStr);
+    
+    // Thay thế ${date} bằng ngày hiện tại
+    const dateStr = now.getDate().toString().padStart(2, '0') + '/' + 
+                   (now.getMonth() + 1).toString().padStart(2, '0') + '/' + 
+                   now.getFullYear();
+    content = content.replace(/\${date}/g, dateStr);
+    
+    chatInput.value = content;
+    chatInput.focus();
+    
+    // Hiệu ứng làm nổi bật ô nhập liệu
+    chatInput.classList.add('highlight-input');
+    setTimeout(() => {
+      chatInput.classList.remove('highlight-input');
+    }, 300);
   }
 }
 
@@ -3565,4 +3745,57 @@ function updateSessionInfo(sessionId) {
       endSessionBtn.style.opacity = '0.5';
     }
   }
+}
+
+// Hàm đồng bộ mẫu câu từ tab mẫu câu sang câu trả lời nhanh
+function syncTemplates() {
+  // Lấy tất cả mẫu câu từ tab mẫu câu
+  const templateItems = document.querySelectorAll('.template-item .template-content p');
+  const quickResponsesContainer = document.querySelector('.quick-responses');
+  
+  // Nếu không có phần tử container hoặc không có phiên đang chọn, return
+  if (!quickResponsesContainer || !currentSessionId) return;
+  
+  // Xóa tất cả phần tử cũ trừ nút xem thêm
+  const existingResponses = quickResponsesContainer.querySelectorAll('.quick-response-item');
+  existingResponses.forEach(item => item.remove());
+  
+  // Nút "Xem thêm" có thể đã tồn tại
+  const showTemplatesBtn = document.getElementById('show-templates-btn');
+  if (showTemplatesBtn) {
+    showTemplatesBtn.remove();
+  }
+  
+  // Lấy tối đa 4 mẫu câu từ tab mẫu câu
+  let count = 0;
+  templateItems.forEach(item => {
+    if (count < 4) {
+      const responseItem = document.createElement('div');
+      responseItem.className = 'quick-response-item';
+      responseItem.textContent = item.textContent;
+      
+      // Thêm vào đầu container
+      quickResponsesContainer.appendChild(responseItem);
+      count++;
+    }
+  });
+  
+  // Thêm nút "Xem thêm"
+  const newShowTemplatesBtn = document.createElement('button');
+  newShowTemplatesBtn.id = 'show-templates-btn';
+  newShowTemplatesBtn.className = 'quick-response-more';
+  newShowTemplatesBtn.innerHTML = '<i class="fas fa-ellipsis-h"></i> Xem thêm mẫu câu';
+  newShowTemplatesBtn.addEventListener('click', () => {
+    // Chuyển sang tab mẫu câu
+    const templatesMenuItem = document.querySelector('.menu-item[data-section="templates"]');
+    if (templatesMenuItem) {
+      templatesMenuItem.click();
+    }
+  });
+  quickResponsesContainer.appendChild(newShowTemplatesBtn);
+  
+  // Cài đặt lại sự kiện cho các câu trả lời nhanh
+  setupQuickResponses();
+  
+  console.log("Đã đồng bộ mẫu câu sang câu trả lời nhanh");
 }

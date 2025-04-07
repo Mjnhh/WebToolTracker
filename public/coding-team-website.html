@@ -48,6 +48,225 @@
                 background-position: 468px 0;
             }
         }
+        
+        /* Quiz Badge Styles */
+        .quiz-link {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .quiz-badge {
+            font-size: 0.7rem;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        /* Header styles */
+        header {
+            background-color: var(--dark-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        
+        .logo-img {
+            height: 80px;
+            width: auto;
+            max-width: 100px;
+            transition: transform var(--transition-speed);
+        }
+        
+        .name-img {
+            height: 50px;
+            max-width: 70%;
+            transition: transform var(--transition-speed);
+            margin-left: 10px;
+        }
+        
+        .logo:hover .logo-img,
+        .logo:hover .name-img {
+            transform: scale(1.05);
+        }
+        
+        nav {
+            flex: 0 1 auto;
+            display: flex;
+            justify-content: center;
+        }
+        
+        nav ul {
+            display: flex;
+            gap: 1.5rem;
+            margin: 0;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+        
+        nav ul li {
+            position: relative;
+            white-space: nowrap;
+        }
+        
+        nav ul li a {
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+            position: relative;
+            padding-bottom: 5px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary-color);
+        }
+        
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+        
+        nav ul li a:hover::after {
+            width: 100%;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        
+        .auth-buttons a {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        .login-btn {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+        }
+        
+        .login-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .register-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .register-btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-3px);
+        }
+        
+        /* Optimize for tablets */
+        @media screen and (max-width: 992px) {
+            nav ul {
+                gap: 1rem;
+            }
+            
+            nav ul li a {
+                font-size: 0.9rem;
+            }
+            
+            .auth-buttons a {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Media query for mobile devices */
+        @media screen and (max-width: 768px) {
+            .nav-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .logo {
+                margin-bottom: 1rem;
+            }
+            
+            .logo-img {
+                height: 60px;
+            }
+            
+            .name-img {
+                height: 40px;
+            }
+            
+            nav ul {
+                gap: 1rem;
+                margin-bottom: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .auth-buttons {
+                margin: 0.5rem 0;
+            }
+        }
+        
+        @media screen and (min-width: 993px) {
+            .nav-container {
+                justify-content: space-between;
+            }
+            
+            nav {
+                flex: 0 1 auto;
+                margin: 0 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -70,16 +289,17 @@
             <div class="auth-buttons">
                 <a href="login.html" class="login-btn" id="login-button" data-i18n="login">Đăng nhập</a>
                 <a href="register.html" class="register-btn" id="register-button" data-i18n="register">Đăng ký</a>
-                </div>
+            </div>
+        </div>
     </header>
     <!-- Hero Section -->
     <section class="hero" id="home">
-    <div id="particles-js"></div>
-    <div class="container">
-        <h1 data-aos="fade-up" data-aos-duration="1000">Giải pháp code chuyên nghiệp</h1>
-        <p data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">Chúng tôi chuyên cung cấp dịch vụ phát triển website, ứng dụng và các công cụ tự động hóa với chất lượng cao và giá cả hợp lý.</p>
-        <a href="#services" class="btn" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">Khám phá dịch vụ</a>
-    </div>
+        <div id="particles-js"></div>
+        <div class="container">
+            <h1 data-aos="fade-up" data-aos-duration="1000">Giải pháp code chuyên nghiệp</h1>
+            <p data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">Chúng tôi chuyên cung cấp dịch vụ phát triển website, ứng dụng và các công cụ tự động hóa với chất lượng cao và giá cả hợp lý.</p>
+            <a href="#services" class="btn" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">Khám phá dịch vụ</a>
+        </div>
     </section>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -108,7 +328,7 @@
             }
         });
     </script>
-<!-- Thêm counter section -->
+    <!-- Thêm counter section -->
     <section class="counter">
         <div class="container">
             <div class="counter-grid">
@@ -137,146 +357,146 @@
     </section>
     <!-- Script JavaScript để đếm số -->
     <script>
-document.addEventListener("DOMContentLoaded", function () {
-    // Chọn tất cả các phần tử counter
-    const counters = document.querySelectorAll(".counter-number");
+    document.addEventListener("DOMContentLoaded", function () {
+        // Chọn tất cả các phần tử counter
+        const counters = document.querySelectorAll(".counter-number");
 
-    // Hàm animation counter sử dụng requestAnimationFrame để đồng bộ với refresh rate màn hình
-    function animateCounter(counter) {
-        const target = parseInt(counter.getAttribute("data-count"), 10);
-        
-        // Kiểm tra nếu đã bắt đầu đếm hoặc target không hợp lệ
-        if (isNaN(target) || counter.dataset.counting === "true") return;
+        // Hàm animation counter sử dụng requestAnimationFrame để đồng bộ với refresh rate màn hình
+        function animateCounter(counter) {
+            const target = parseInt(counter.getAttribute("data-count"), 10);
+            
+            // Kiểm tra nếu đã bắt đầu đếm hoặc target không hợp lệ
+            if (isNaN(target) || counter.dataset.counting === "true") return;
 
-        // Đánh dấu đã bắt đầu đếm
-        counter.dataset.counting = "true";
-        
-        // Thiết lập các tham số animation
-        let count = 0;
-        const duration = 2000; // Thời gian animation (ms)
-        const startTime = performance.now();
-        
-        // Hàm cập nhật sử dụng requestAnimationFrame để mượt hơn
-        function updateCounter(currentTime) {
-            // Tính toán thời gian đã trôi qua
-            const elapsedTime = currentTime - startTime;
+            // Đánh dấu đã bắt đầu đếm
+            counter.dataset.counting = "true";
             
-            // Tính toán tiến độ (từ 0 đến 1)
-            const progress = Math.min(elapsedTime / duration, 1);
+            // Thiết lập các tham số animation
+            let count = 0;
+            const duration = 2000; // Thời gian animation (ms)
+            const startTime = performance.now();
             
-            // Áp dụng easing function để animation tự nhiên hơn
-            const easedProgress = easeOutQuad(progress);
-            
-            // Tính toán giá trị hiện tại
-            const currentValue = Math.floor(easedProgress * target);
-            
-            // Cập nhật text hiển thị dựa trên loại counter
-            if (counter.classList.contains("code-lines")) {
-                counter.innerText = Math.floor(currentValue / 1000) + "K+";
-            } else if (counter.classList.contains("no-plus")) {
-                counter.innerText = currentValue;
-            } else {
-                counter.innerText = currentValue + "+";
-            }
-            
-            // Tiếp tục animation nếu chưa hoàn thành
-            if (progress < 1) {
-                requestAnimationFrame(updateCounter);
-            } else {
-                // Hoàn thành animation
-                counter.dataset.counting = "false";
+            // Hàm cập nhật sử dụng requestAnimationFrame để mượt hơn
+            function updateCounter(currentTime) {
+                // Tính toán thời gian đã trôi qua
+                const elapsedTime = currentTime - startTime;
                 
-                // Đảm bảo giá trị cuối cùng chính xác
+                // Tính toán tiến độ (từ 0 đến 1)
+                const progress = Math.min(elapsedTime / duration, 1);
+                
+                // Áp dụng easing function để animation tự nhiên hơn
+                const easedProgress = easeOutQuad(progress);
+                
+                // Tính toán giá trị hiện tại
+                const currentValue = Math.floor(easedProgress * target);
+                
+                // Cập nhật text hiển thị dựa trên loại counter
                 if (counter.classList.contains("code-lines")) {
-                    counter.innerText = Math.floor(target / 1000) + "K+";
+                    counter.innerText = Math.floor(currentValue / 1000) + "K+";
                 } else if (counter.classList.contains("no-plus")) {
-                    counter.innerText = target;
+                    counter.innerText = currentValue;
                 } else {
-                    counter.innerText = target + "+";
+                    counter.innerText = currentValue + "+";
                 }
-            }
-        }
-        
-        // Hàm easing để tạo hiệu ứng mượt mà hơn
-        function easeOutQuad(t) {
-            return t * (2 - t);
-        }
-        
-        // Bắt đầu animation
-        requestAnimationFrame(updateCounter);
-    }
-
-    // Sử dụng Intersection Observer để kích hoạt animation khi scroll đến
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                setTimeout(() => {
-                    animateCounter(entry.target);
-                }, 300); // Thêm delay nhỏ để animation không bắt đầu quá sớm
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.3 }); // Thiết lập ngưỡng thấp hơn để counter bắt đầu sớm hơn
-
-    // Theo dõi tất cả các counter
-    counters.forEach(counter => {
-        observer.observe(counter);
-    });
-});
-
-    </script>
-<!-- Thêm script ở cuối body -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-<script>
-    // Khởi tạo AOS
-    document.addEventListener('DOMContentLoaded', function() {
-        AOS.init();
-        // Hiệu ứng đếm số
-        const counters = document.querySelectorAll('.counter-number');
-        const speed = 200;
-        counters.forEach(counter => {
-            const updateCount = () => {
-                const target = +counter.getAttribute('data-count');
-                const count = +counter.innerText;
-                const inc = target / speed;
-                if (count < target) {
-                    counter.innerText = Math.ceil(count + inc);
-                    setTimeout(updateCount, 1);
+                
+                // Tiếp tục animation nếu chưa hoàn thành
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
                 } else {
-                    counter.innerText = target;
-                }
-            };
-            // Khởi tạo đếm khi cuộn đến phần tử
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        updateCount();
-                        observer.unobserve(entry.target);
+                    // Hoàn thành animation
+                    counter.dataset.counting = "false";
+                    
+                    // Đảm bảo giá trị cuối cùng chính xác
+                    if (counter.classList.contains("code-lines")) {
+                        counter.innerText = Math.floor(target / 1000) + "K+";
+                    } else if (counter.classList.contains("no-plus")) {
+                        counter.innerText = target;
+                    } else {
+                        counter.innerText = target + "+";
                     }
-                });
+                }
+            }
+            
+            // Hàm easing để tạo hiệu ứng mượt mà hơn
+            function easeOutQuad(t) {
+                return t * (2 - t);
+            }
+            
+            // Bắt đầu animation
+            requestAnimationFrame(updateCounter);
+        }
+
+        // Sử dụng Intersection Observer để kích hoạt animation khi scroll đến
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        animateCounter(entry.target);
+                    }, 300); // Thêm delay nhỏ để animation không bắt đầu quá sớm
+                    observer.unobserve(entry.target);
+                }
             });
+        }, { threshold: 0.3 }); // Thiết lập ngưỡng thấp hơn để counter bắt đầu sớm hơn
+
+        // Theo dõi tất cả các counter
+        counters.forEach(counter => {
             observer.observe(counter);
         });
-        // Khởi tạo Particles.js
-        particlesJS('particles-js', {
-            particles: {
-                number: { value: 80, density: { enable: true, value_area: 800 } },
-                color: { value: "#ffffff" },
-                shape: { type: "circle" },
-                opacity: { value: 0.5, random: false },
-                size: { value: 3, random: true },
-                line_linked: { enable: true, distance: 150, color: "#ffffff", opacity: 0.4, width: 1 },
-                move: { enable: true, speed: 6, direction: "none", random: false, straight: false, out_mode: "out", bounce: false }
-            },
-            interactivity: {
-                detect_on: "canvas",
-                events: { onhover: { enable: true, mode: "repulse" }, onclick: { enable: true, mode: "push" } },
-                modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
-            },
-            retina_detect: true
-        });
     });
-</script>
+
+    </script>
+    <!-- Thêm script ở cuối body -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script>
+        // Khởi tạo AOS
+        document.addEventListener('DOMContentLoaded', function() {
+            AOS.init();
+            // Hiệu ứng đếm số
+            const counters = document.querySelectorAll('.counter-number');
+            const speed = 200;
+            counters.forEach(counter => {
+                const updateCount = () => {
+                    const target = +counter.getAttribute('data-count');
+                    const count = +counter.innerText;
+                    const inc = target / speed;
+                    if (count < target) {
+                        counter.innerText = Math.ceil(count + inc);
+                        setTimeout(updateCount, 1);
+                    } else {
+                        counter.innerText = target;
+                    }
+                };
+                // Khởi tạo đếm khi cuộn đến phần tử
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            updateCount();
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                });
+                observer.observe(counter);
+            });
+            // Khởi tạo Particles.js
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: "#ffffff" },
+                    shape: { type: "circle" },
+                    opacity: { value: 0.5, random: false },
+                    size: { value: 3, random: true },
+                    line_linked: { enable: true, distance: 150, color: "#ffffff", opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 6, direction: "none", random: false, straight: false, out_mode: "out", bounce: false }
+                },
+                interactivity: {
+                    detect_on: "canvas",
+                    events: { onhover: { enable: true, mode: "repulse" }, onclick: { enable: true, mode: "push" } },
+                    modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
+                },
+                retina_detect: true
+            });
+        });
+    </script>
     <!-- Services Section -->
     <section class="services" id="services">
         <div id="services-particles"></div>
@@ -330,11 +550,22 @@ document.addEventListener("DOMContentLoaded", function () {
         <div id="team-particles"></div>
         <div class="container">
             <div class="section-title" data-aos="fade-down" data-aos-duration="800">
-                <h2>Đội ngũ chủ chốt của chúng tôi</h2>
-                <div class="title-underline"></div>
+                <h2>Đội ngũ phát triển</h2>
+                <p>Đội ngũ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực công nghệ</p>
             </div>
-            <!-- Carousel cho team members -->
-            <div class="team-carousel" id="team-carousel" data-aos="fade-up" data-aos-delay="300">
+            
+            <!-- Team Carousel Navigation -->
+            <div class="team-navigation">
+                <button id="team-prev" class="team-nav-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="team-next" class="team-nav-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <!-- Team Carousel -->
+            <div class="team-carousel" id="team-carousel">
                 <!-- Team Member 1 -->
                 <div class="team-card">
                     <div class="team-card-inner">
@@ -468,6 +699,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>
             </div>
+            
             <!-- Phần hiển thị số lượng thành viên -->
             <div class="team-counter" data-aos="fade-up" data-aos-delay="400">
                 <div class="counter-info">
@@ -544,7 +776,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             }
         });
-        </script>
+    </script>
     <!-- Contact Section -->
     <section class="contact" id="contact">
         <div class="container">
@@ -634,6 +866,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>
             </div>
+        </div>
     </section>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -804,66 +1037,66 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="accordion" data-aos="fade-up" data-aos-delay="300">
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <span><i class="fas fa-dollar-sign"></i> Các dịch vụ của bạn có giá như thế nào?</span>
+                            <span><i class="fas fa-dollar-sign"></i> Chi phí dịch vụ của TectonicDevs có mức giá như thế nào?</span>
                             <span class="icon"><i class="fas fa-chevron-down"></i></span>
                         </div>
                         <div class="accordion-body">
                             <div class="accordion-content">
-                                <p>Giá dịch vụ của chúng tôi phụ thuộc vào quy mô và độ phức tạp của dự án. Chúng tôi cung cấp báo giá miễn phí sau khi thảo luận chi tiết về yêu cầu của bạn. Vui lòng liên hệ với chúng tôi để biết thêm chi tiết.</p>
+                                <p>Chi phí dịch vụ của chúng tôi được tính dựa trên quy mô và độ phức tạp của dự án. Chúng tôi cung cấp các gói dịch vụ linh hoạt với mức giá cạnh tranh, phù hợp với ngân sách của mọi doanh nghiệp. Website cơ bản bắt đầu từ 10-20 triệu, website TMĐT từ 20-50 triệu, website tùy chỉnh cao có thể trên 50 triệu. Vui lòng liên hệ để nhận báo giá chi tiết miễn phí cho dự án của bạn.</p>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <span><i class="fas fa-clock"></i> Thời gian hoàn thành một dự án là bao lâu?</span>
+                            <span><i class="fas fa-clock"></i> Quy trình và thời gian triển khai dự án tại TectonicDevs?</span>
                             <span class="icon"><i class="fas fa-chevron-down"></i></span>
                         </div>
                         <div class="accordion-body">
                             <div class="accordion-content">
-                                <p>Thời gian hoàn thành tùy thuộc vào quy mô và độ phức tạp của dự án. Các dự án nhỏ có thể hoàn thành trong vòng 1-2 tuần, trong khi các dự án lớn hơn có thể mất từ 1-3 tháng. Chúng tôi luôn cung cấp lộ trình thời gian cụ thể khi bắt đầu dự án.</p>
+                                <p>Chúng tôi làm việc theo quy trình Agile với các sprint 2 tuần, giúp bạn thấy được kết quả cụ thể sau mỗi giai đoạn. Thời gian phát triển website thường từ 2-8 tuần tùy theo quy mô và độ phức tạp. Website landing page đơn giản có thể hoàn thành trong 1-2 tuần, website TMĐT phức tạp có thể mất 2-3 tháng. Chúng tôi luôn cung cấp lộ trình thời gian chi tiết ngay từ khi bắt đầu dự án.</p>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <span><i class="fas fa-tasks"></i> Quy trình làm việc của bạn như thế nào?</span>
+                            <span><i class="fas fa-tasks"></i> TectonicDevs sử dụng công nghệ gì cho các dự án?</span>
                             <span class="icon"><i class="fas fa-chevron-down"></i></span>
                         </div>
                         <div class="accordion-body">
                             <div class="accordion-content">
-                                <p>Quy trình làm việc của chúng tôi bao gồm:</p>
+                                <p>Chúng tôi sử dụng các công nghệ hiện đại và tiên tiến nhất phù hợp với từng dự án cụ thể:</p>
                                 <ul class="process-list">
-                                    <li><span class="process-number">1</span> Thảo luận và phân tích yêu cầu</li>
-                                    <li><span class="process-number">2</span> Thiết kế mẫu</li>
-                                    <li><span class="process-number">3</span> Phát triển</li>
-                                    <li><span class="process-number">4</span> Kiểm thử</li>
-                                    <li><span class="process-number">5</span> Phản hồi và chỉnh sửa</li>
-                                    <li><span class="process-number">6</span> Bàn giao sản phẩm</li>
-                                    <li><span class="process-number">7</span> Hỗ trợ sau bàn giao</li>
+                                    <li>Frontend: React, Angular, Vue.js, NextJS</li>
+                                    <li>Backend: Node.js, Express, Django, Laravel</li>
+                                    <li>Database: MongoDB, PostgreSQL, MySQL</li>
+                                    <li>Cloud: AWS, Google Cloud, Azure</li>
+                                    <li>AI/ML: TensorFlow, PyTorch, NLTK cho chatbot</li>
+                                    <li>DevOps: Docker, Kubernetes, CI/CD pipelines</li>
+                                    <li>Bảo mật: SSL, WAF, Anti-DDoS, Security Audit</li>
                                 </ul>
-                                <p>Chúng tôi luôn đảm bảo khách hàng được tham gia vào mỗi giai đoạn của quá trình.</p>
+                                <p>Công nghệ được lựa chọn dựa trên yêu cầu của dự án, đảm bảo hiệu suất cao, bảo mật và khả năng mở rộng.</p>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <span><i class="fas fa-tools"></i> Bạn có cung cấp dịch vụ bảo trì sau khi hoàn thành dự án không?</span>
+                            <span><i class="fas fa-tools"></i> Các dịch vụ hỗ trợ và bảo trì sau khi dự án hoàn thành?</span>
                             <span class="icon"><i class="fas fa-chevron-down"></i></span>
                         </div>
                         <div class="accordion-body">
                             <div class="accordion-content">
-                                <p>Có, chúng tôi cung cấp dịch vụ bảo trì và hỗ trợ sau khi hoàn thành dự án. Chúng tôi có các gói bảo trì hàng tháng hoặc theo yêu cầu tùy theo nhu cầu của khách hàng.</p>
+                                <p>TectonicDevs cung cấp dịch vụ bảo trì toàn diện bao gồm: cập nhật bảo mật thường xuyên, sao lưu dữ liệu tự động, giám sát hệ thống 24/7, báo cáo hiệu suất hàng tháng, và hỗ trợ kỹ thuật ưu tiên. Website được bảo hành miễn phí 6-12 tháng sau khi bàn giao, sau đó bạn có thể lựa chọn các gói bảo trì hàng tháng hoặc theo yêu cầu phù hợp với nhu cầu của doanh nghiệp.</p>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <span><i class="fas fa-plus-circle"></i> Tôi có thể yêu cầu thêm tính năng sau khi dự án đã hoàn thành không?</span>
+                            <span><i class="fas fa-plus-circle"></i> Làm thế nào để đảm bảo bảo mật cho website và dữ liệu?</span>
                             <span class="icon"><i class="fas fa-chevron-down"></i></span>
                         </div>
                         <div class="accordion-body">
                             <div class="accordion-content">
-                                <p>Chắc chắn rồi! Chúng tôi luôn sẵn sàng thêm tính năng mới hoặc nâng cấp dự án hiện tại của bạn. Chúng tôi sẽ đánh giá yêu cầu và cung cấp một báo giá cho những thay đổi hoặc tính năng mới.</p>
+                                <p>Bảo mật là ưu tiên hàng đầu của TectonicDevs. Chúng tôi áp dụng cách tiếp cận bảo mật đa lớp để bảo vệ dữ liệu và hệ thống: mã hóa end-to-end, kiểm soát truy cập nghiêm ngặt, tường lửa và giám sát liên tục. Tất cả các giải pháp của chúng tôi đều được xây dựng với nguyên tắc "security by design", sử dụng các công nghệ bảo mật hiện đại như OAuth 2.0, JWT, HTTPS và mã hóa dữ liệu. Chúng tôi tuân thủ các quy định về bảo vệ dữ liệu và thực hiện đánh giá rủi ro thường xuyên.</p>
                             </div>
                         </div>
                     </div>
@@ -874,11 +1107,11 @@ document.addEventListener("DOMContentLoaded", function () {
                             <i class="fas fa-headset"></i>
                         </div>
                         <h3>Vẫn còn thắc mắc?</h3>
-                        <p>Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giải đáp mọi thắc mắc của bạn</p>
+                        <p>Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giải đáp mọi câu hỏi chi tiết về dịch vụ</p>
                         <a href="#contact" class="btn btn-support">
                             <i class="fas fa-paper-plane"></i> Liên hệ ngay
                         </a>
-                        <div class="speech-bubble">Chúng tôi sẽ luôn đồng hành cùng bạn.</div>
+                        <div class="speech-bubble">Chúng tôi sẽ đồng hành cùng dự án của bạn từ đầu đến cuối.</div>
                         <img src="optimized/image.robo.png" alt="Robot" class="robot-image lazy" data-src="optimized/image.robo.png">
                     </div>
                 </div>

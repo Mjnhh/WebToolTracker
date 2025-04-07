@@ -8,21 +8,233 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/particles.js/2.0.0/particles.min.js"></script>
+    <script src="auth.js"></script>
+    
+    <style>
+        /* Header styles */
+        header {
+            background-color: var(--dark-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        
+        .logo-img {
+            height: 80px;
+            width: auto;
+            max-width: 100px;
+            transition: transform var(--transition-speed);
+        }
+        
+        .name-img {
+            height: 50px;
+            max-width: 70%;
+            transition: transform var(--transition-speed);
+            margin-left: 10px;
+        }
+        
+        .logo:hover .logo-img,
+        .logo:hover .name-img {
+            transform: scale(1.05);
+        }
+        
+        nav {
+            flex: 0 1 auto;
+            display: flex;
+            justify-content: center;
+        }
+        
+        nav ul {
+            display: flex;
+            gap: 1.5rem;
+            margin: 0;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+        
+        nav ul li {
+            position: relative;
+            white-space: nowrap;
+        }
+        
+        nav ul li a {
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+            position: relative;
+            padding-bottom: 5px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary-color);
+        }
+        
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+        
+        nav ul li a:hover::after {
+            width: 100%;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        
+        .auth-buttons a {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        .login-btn {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+        }
+        
+        .login-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .register-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .register-btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-3px);
+        }
+        
+        /* Optimize for tablets */
+        @media screen and (max-width: 992px) {
+            nav ul {
+                gap: 1rem;
+            }
+            
+            nav ul li a {
+                font-size: 0.9rem;
+            }
+            
+            .auth-buttons a {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Media query for mobile devices */
+        @media screen and (max-width: 768px) {
+            .nav-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .logo {
+                margin-bottom: 1rem;
+            }
+            
+            .logo-img {
+                height: 60px;
+            }
+            
+            .name-img {
+                height: 40px;
+            }
+            
+            nav ul {
+                gap: 1rem;
+                margin-bottom: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .auth-buttons {
+                margin: 0.5rem 0;
+            }
+        }
+        
+        /* Quiz Badge Styles */
+        .quiz-link {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .quiz-badge {
+            font-size: 0.7rem;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
     <header>
         <div class="container nav-container">
             <a href="coding-team-website.html#home" class="logo">
-                <img src="logo.png" alt="Logo" class="logo-img">
-                <img src="name.png" alt="Name" class="name-img">
+                <img src="optimized/logo.png" alt="Logo" class="logo-img">
+                <img src="optimized/name.png" alt="Name" class="name-img">
             </a>
             <nav>
                 <ul>
-                    <li><a href="#home" data-i18n="home">Trang chủ</a></li>
-                    <li><a href="#services" data-i18n="services">Dịch vụ</a></li>
-                    <li><a href="#team" data-i18n="contact">Liên hệ</a></li>
-                    <li><a href="#faq" data-i18n="help">Trợ giúp</a></li>
+                    <li><a href="coding-team-website.html#home" data-i18n="home">Trang chủ</a></li>
+                    <li><a href="coding-team-website.html#services" data-i18n="services">Dịch vụ</a></li>
+                    <li><a href="coding-team-website.html#team" data-i18n="contact">Liên hệ</a></li>
+                    <li><a href="coding-team-website.html#faq" data-i18n="help">Trợ giúp</a></li>
+                    <li><a href="quiz.html" class="quiz-link">Quiz <span class="quiz-badge">Mới</span></a></li>
                 </ul>
             </nav>
             <div class="auth-buttons">
@@ -217,55 +429,6 @@
         </div>
     </section>
 
-    <!-- Projects Section -->
-    <section class="projects" id="projects">
-        <div class="container">
-            <div class="section-title" data-aos="fade-down" data-aos-duration="800">
-                <h2>Dự án tiêu biểu</h2>
-                <div class="title-underline"></div>
-                <p>Một số dự án website nổi bật mà chúng tôi đã thực hiện cho khách hàng</p>
-            </div>
-
-            <div class="projects-grid">
-                <!-- Project 1 -->
-                <div class="project-card" data-aos="fade-up" data-aos-duration="1000">
-                    <div class="project-image">
-                        <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="E-commerce Website">
-                        <div class="project-overlay">
-                            <h3>VietArt E-commerce</h3>
-                            <p>Website bán hàng nghệ thuật truyền thống Việt Nam với đầy đủ tính năng mua sắm và thanh toán.</p>
-                            <a href="#" class="btn btn-sm">Xem chi tiết</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Project 2 -->
-                <div class="project-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
-                    <div class="project-image">
-                        <img src="https://images.unsplash.com/photo-1522542550221-31fd19575a2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Travel Blog">
-                        <div class="project-overlay">
-                            <h3>TravelVietnam Blog</h3>
-                            <p>Blog du lịch với thiết kế hiện đại, tích hợp bản đồ tương tác và hệ thống đặt tour.</p>
-                            <a href="#" class="btn btn-sm">Xem chi tiết</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Project 3 -->
-                <div class="project-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
-                    <div class="project-image">
-                        <img src="https://images.unsplash.com/photo-1565106430482-8f6e74349ca1?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Restaurant Website">
-                        <div class="project-overlay">
-                            <h3>Nhà hàng GreenField</h3>
-                            <p>Website nhà hàng với hệ thống đặt bàn trực tuyến, thực đơn tương tác và giao diện sang trọng.</p>
-                            <a href="#" class="btn btn-sm">Xem chi tiết</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Pricing Section -->
     <section class="pricing" id="pricing">
         <div class="container">
@@ -357,7 +520,6 @@
             </div>
         </div>
     </section>
-
 
     <!-- Contact Section -->
     <section class="contact" id="contact">

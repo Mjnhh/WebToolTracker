@@ -84,14 +84,14 @@ function addAuthStyles() {
     style.id = 'auth-styles';
     style.textContent = `
       .user-greeting {
-        color: #FFFFFF;
-        font-size: 16px;
-        margin-right: 15px;
+        color: white;
         font-weight: 500;
+        margin-right: 15px;
+        margin-left: 20px;
       }
       .profile-btn {
         color: #fff;
-        background-color: #4a90e2;
+        background-color: #3498db;
         padding: 8px 16px;
         border-radius: 4px;
         text-decoration: none;
@@ -131,9 +131,11 @@ function updateAuthButtons(data) {
     
     console.log('Updating auth buttons for user:', username);
     authButtons.innerHTML = `
-      <span class="user-greeting">Xin chào, ${username}</span>
-      <a href="/profile" class="profile-btn" id="profile-button"><i class="fas fa-user-circle"></i> Hồ sơ</a>
-      <a href="#" class="logout-btn" id="logout-button">Đăng xuất</a>
+      <div style="display: flex; align-items: center; margin-left: 20px;">
+        <span class="user-greeting">Xin chào, ${username}</span>
+        <a href="/profile" class="profile-btn" id="profile-button"><i class="fas fa-user-circle"></i> Hồ sơ</a>
+        <a href="#" class="logout-btn" id="logout-button">Đăng xuất</a>
+      </div>
     `;
     setupLogoutButton();
   } else {

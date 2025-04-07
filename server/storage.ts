@@ -630,17 +630,7 @@ export class MemStorage implements IStorage {
   private async addWelcomeMessage(sessionId: string): Promise<void> {
     const welcomeMessage = {
       sessionId,
-      content: `👋 Xin chào! Tôi là trợ lý ảo của Coding Team
-
-Tôi có thể giúp bạn với các vấn đề:
-
-🌐 Tư vấn về dịch vụ thiết kế website
-💻 Tư vấn về công nghệ và giải pháp 
-💰 Báo giá và thời gian thực hiện
-📋 Thông tin về quy trình làm việc
-🛠️ Hỗ trợ kỹ thuật
-
-Bạn cần hỗ trợ vấn đề gì ạ? 😊`,
+      content: `👋 Xin chào! Tôi là trợ lý ảo của TectonicDevs. Tôi có thể giúp bạn tìm hiểu về dịch vụ phát triển website, chatbot thông minh và các giải pháp công nghệ của chúng tôi. Bạn cần hỗ trợ gì?`,
       sender: "bot",
       timestamp: new Date()
     };
