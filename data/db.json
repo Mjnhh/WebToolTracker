@@ -107,6 +107,14 @@
       "isUsed": true,
       "quizScore": 10,
       "usedAt": "2025-04-06T15:34:32.485Z"
+    },
+    {
+      "id": "1c6b3619-e2df-4d4f-882a-670a9752d016",
+      "createdAt": "2025-04-08T11:50:09.938Z",
+      "code": "TECH442ZQR",
+      "discount": 25,
+      "isUsed": false,
+      "quizScore": 10
     }
   ]
 }
