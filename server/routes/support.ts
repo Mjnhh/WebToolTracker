@@ -25,10 +25,10 @@ function isStaff(req: Request, res: Response, next: any) {
     // Xác thực token
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    // Lấy thông tin user từ database
-    storage.getUserById(decoded.id).then(user => {
+    // Get logged in user
+    storage.getUser(decoded.id).then(user => {
       if (!user) {
-        return res.status(404).json({ message: 'Người dùng không tồn tại' });
+        return res.status(401).json({ message: 'Unauthorized: User not found' });
       }
       
       // Kiểm tra quyền staff hoặc admin

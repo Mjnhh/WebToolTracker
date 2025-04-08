@@ -41,7 +41,7 @@ export function createUserRouter() {
   router.get('/me', authMiddleware, async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.id;
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: 'Người dùng không tồn tại' });
@@ -109,7 +109,7 @@ export function createUserRouter() {
       }
       
       // Lấy thông tin người dùng
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: 'Người dùng không tồn tại' });

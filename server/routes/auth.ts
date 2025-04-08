@@ -92,7 +92,7 @@ router.post('/logout-all', async (req: Request, res: Response) => {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
-    const user = await storage.getUserById(decoded.id);
+    const user = await storage.getUser(decoded.id);
     
     if (!user) {
       return res.status(401).json({ message: 'Người dùng không tồn tại' });
@@ -123,11 +123,13 @@ router.get('/verify', async (req: Request, res: Response) => {
   const token = authHeader.split(' ')[1];
   
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
-    const user = await storage.getUserById(decoded.id);
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    // Lấy thông tin người dùng từ database
+    const user = await storage.getUser(decoded.id);
     
     if (!user) {
-      return res.status(401).json({ message: 'Người dùng không tồn tại' });
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
     }
     
     // Đảm bảo trường role luôn tồn tại
@@ -216,7 +218,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     };
     
     // Lấy thông tin người dùng từ database
-    const user = await storage.getUserById(decoded.id);
+    const user = await storage.getUser(decoded.id);
     
     if (!user) {
       return res.status(401).json({ message: 'Người dùng không tồn tại' });

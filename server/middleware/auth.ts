@@ -27,7 +27,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     console.log('Token verified:', decoded);
     
     // Lấy thông tin user từ database
-    storage.getUserById(decoded.id).then(user => {
+    storage.getUser(decoded.id).then(user => {
       if (!user) {
         return res.status(404).json({ message: 'Người dùng không tồn tại' });
       }
@@ -71,16 +71,16 @@ export function isStaff(req: Request, res: Response, next: NextFunction) {
     console.log('Staff token verified:', decoded);
     
     // Lấy thông tin user từ database
-    storage.getUserById(decoded.id).then(user => {
+    storage.getUser(decoded.id).then(user => {
       if (!user) {
-        return res.status(404).json({ message: 'Người dùng không tồn tại' });
+        return res.status(401).json({ message: 'Người dùng không tồn tại' });
       }
       
       console.log('Staff check - User role:', user.role);
       
       // Kiểm tra quyền staff hoặc admin
       if (user.role !== 'staff' && user.role !== 'admin') {
-        return res.status(403).json({ message: 'Staff privileges required' });
+        return res.status(403).json({ message: 'Quyền truy cập bị từ chối: Yêu cầu quyền nhân viên' });
       }
       
       // Lưu thông tin user vào request
