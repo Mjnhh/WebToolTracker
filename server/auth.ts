@@ -30,7 +30,10 @@ export function setupAuth(app: Express) {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: new (require('connect-pg-simple')(session))({
+      pool: storage.pool,
+      tableName: 'sessions'
+    }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       secure: app.get('env') === 'production',

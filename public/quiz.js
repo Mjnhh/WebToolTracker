@@ -385,8 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Tạo object chứa thông tin voucher
         const voucherData = {
             code: code,
-            discount: 25, // 25% discount
-            isUsed: false,
+            discountPercent: 25, // Sửa thành discountPercent thay vì discount 
             quizScore: quizScore
         };
         
@@ -401,14 +400,27 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => {
             if (!response.ok) {
                 console.error('Lỗi khi lưu voucher:', response.statusText);
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
             console.log('Voucher đã được lưu:', data);
+            // Hiển thị thông báo thành công nếu cần
+            const voucherMessage = document.querySelector('.voucher-message');
+            if (voucherMessage) {
+                voucherMessage.textContent = "Mã giảm giá đã được tạo và lưu thành công!";
+                voucherMessage.style.color = "#27ae60";
+            }
         })
         .catch(error => {
             console.error('Lỗi khi lưu voucher:', error);
+            // Hiển thị thông báo lỗi nếu cần
+            const voucherMessage = document.querySelector('.voucher-message');
+            if (voucherMessage) {
+                voucherMessage.textContent = "Có lỗi khi tạo mã giảm giá. Vui lòng thử lại sau.";
+                voucherMessage.style.color = "#e74c3c";
+            }
         });
     }
     

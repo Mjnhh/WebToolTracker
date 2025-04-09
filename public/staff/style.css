@@ -2345,3 +2345,27 @@ body.dark-mode #volume-slider {
 .quick-response-more i {
   font-size: 0.9rem;
 }
+
+/* Thêm CSS cho nút xóa phiên */
+.delete-session-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.delete-session-btn:hover {
+  background-color: #c82333;
+}
+
+.action-button.danger {
+  background-color: #dc3545;
+}
+
+.action-button.danger:hover {
+  background-color: #c82333;
+}

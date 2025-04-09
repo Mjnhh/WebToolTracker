@@ -22,13 +22,24 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+interface Inquiry {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
 export default function Inquiries() {
   const { toast } = useToast();
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  const { data: inquiries, isLoading } = useQuery({
+  const { data: inquiries, isLoading, refetch } = useQuery<Inquiry[]>({
     queryKey: ["/api/inquiries"],
   });
 
@@ -156,7 +167,7 @@ export default function Inquiries() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-dark-lighter">
-                        {inquiries.map((inquiry: any) => (
+                        {inquiries.map((inquiry: Inquiry) => (
                           <tr key={inquiry.id} className="hover:bg-dark-lighter transition-colors">
                             <td className="px-3 py-3 whitespace-nowrap">
                               <div className="text-sm">

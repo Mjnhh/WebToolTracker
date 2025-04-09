@@ -14,6 +14,43 @@ export function initializeSocket(io: Server) {
     socket.join(`chat:${sessionId}`);
     socket.join(sessionId);
     
+    // Kiểm tra và gửi tin nhắn chào mừng khi kết nối mới
+    (async () => {
+      try {
+        // Kiểm tra xem session có tồn tại không
+        const session = await storage.getChatSession(sessionId);
+        if (!session) {
+          console.log(`Session ${sessionId} not found, will not send greeting`);
+          return;
+        }
+        
+        // Kiểm tra xem session đã có tin nhắn nào chưa
+        const messages = await storage.getChatMessages(sessionId);
+        if (messages && messages.length === 0) {
+          console.log(`Sending welcome message to new session ${sessionId}`);
+          
+          // Tạo tin nhắn chào mừng
+          const welcomeMessage = '👋 Xin chào! Tôi là trợ lý ảo của TectonicDevs. Tôi có thể giúp bạn tìm hiểu về dịch vụ phát triển website, chatbot thông minh và các giải pháp công nghệ của chúng tôi. Bạn cần hỗ trợ gì?';
+          
+          // Lưu tin nhắn chào mừng vào cơ sở dữ liệu
+          const botMessage = await storage.saveChatMessage({
+            sessionId,
+            content: welcomeMessage,
+            sender: 'bot',
+            metadata: undefined
+          });
+          
+          // Gửi tin nhắn chào mừng qua WebSocket
+          socket.emit('bot_message', {
+            content: welcomeMessage,
+            requiresHumanSupport: false
+          });
+        }
+      } catch (error) {
+        console.error('Error sending welcome message:', error);
+      }
+    })();
+    
     socket.on('user_message', async (data) => {
       try {
         console.log(`Received message from user in session ${data.sessionId}:`, data.message);
@@ -52,8 +89,7 @@ export function initializeSocket(io: Server) {
           sessionId: data.sessionId,
           content: data.message,
           sender: 'user',
-          timestamp: new Date(data.timestamp),
-          metadata: null
+          metadata: undefined
         });
         
         // Phát tín hiệu realtime về tin nhắn mới thông qua Socket.IO cho các nhân viên hỗ trợ
@@ -77,7 +113,6 @@ export function initializeSocket(io: Server) {
             sessionId: data.sessionId,
             content: response,
             sender: 'bot',
-            timestamp: new Date(),
             metadata: JSON.stringify({ requiresHumanSupport })
           });
           
@@ -113,8 +148,14 @@ export function initializeSocket(io: Server) {
             };
             
             const updatedSession = await storage.updateChatSession(data.sessionId, {
-              metadata: JSON.stringify(updatedMetadata)
+              metadata: JSON.stringify(updatedMetadata),
+              lastActivity: new Date()
             });
+            
+            if (!updatedSession) {
+              console.error('Failed to update chat session');
+              return;
+            }
             
             console.log('Session updated successfully:', updatedSession.id);
             console.log('Sending support request to staff channel:', data.sessionId);

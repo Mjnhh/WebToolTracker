@@ -4,6 +4,9 @@ import { Socket } from "socket.io";
 import { IncomingMessage } from "http";
 import { IStorage } from "./storage";
 import jwt from "jsonwebtoken";
+import { PostgresStorage } from "./storage";
+import { InsertChatMessage } from "@shared/schema";
+import { io as clientIO } from "socket.io-client";
 
 interface CustomSocket extends Socket {
   request: IncomingMessage & {
@@ -100,6 +103,7 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
     // Xác định kiểu client (khách hàng hoặc nhân viên)
     const userType = socket.handshake.query.type;
     isStaff = userType === 'staff';
+    console.log(`Client type: ${userType}, isStaff: ${isStaff}`);
     
     // Xác thực token nếu có
     const token = socket.handshake.auth.token;
@@ -107,7 +111,14 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any;
         socket.data.user = decoded;
-        console.log(`Authenticated user connected: ${decoded.username}`);
+        console.log(`Authenticated user connected: ${decoded.username} (${decoded.id})`);
+        
+        // Nếu là nhân viên, thêm vào phòng nhân viên
+        if (decoded.role === 'staff' || decoded.role === 'admin') {
+          socket.join('support-staff');
+          console.log(`Staff member ${decoded.username} (${decoded.id}) joined support-staff room`);
+          isStaff = true;
+        }
       } catch (error) {
         console.error('Authentication error:', error);
       }
@@ -120,6 +131,29 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
       
       if (roomId === 'support-staff') {
         console.log('Staff member joined support channel');
+        
+        // Gửi danh sách phiên cần hỗ trợ ngay khi staff tham gia
+        setTimeout(async () => {
+          try {
+            const allSessions = await storage.getAllChatSessions();
+            const sessionsNeedingSupport = allSessions.filter(session => {
+              try {
+                const metadata = session.metadata ? JSON.parse(session.metadata) : {};
+                return metadata.needsHumanSupport && !metadata.isHumanAssigned;
+              } catch (e) {
+                console.error('Error parsing session metadata:', e);
+                return false;
+              }
+            });
+            
+            if (sessionsNeedingSupport.length > 0) {
+              console.log(`Sending ${sessionsNeedingSupport.length} sessions needing support to newly joined staff member`);
+              socket.emit('pending-support-sessions', sessionsNeedingSupport);
+            }
+          } catch (error) {
+            console.error('Error fetching sessions for staff:', error);
+          }
+        }, 1000);
       } else {
         // Tham gia vào phiên hỗ trợ
         socket.on('join-chat', (data) => {
@@ -131,19 +165,32 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
       }
     });
     
+    // Kiểm tra tư cách thành viên phòng (để debug)
+    socket.on('check-room-membership', (data) => {
+      const room = data.room;
+      const isMember = socket.rooms.has(room);
+      console.log(`Check room membership for ${room}: ${isMember}`);
+      socket.emit('room-membership-result', {
+        room, 
+        isMember,
+        allRooms: Array.from(socket.rooms),
+        roomSize: io.sockets.adapter.rooms.get(room)?.size || 0,
+        roomMembers: Array.from(io.sockets.adapter.rooms.get(room) || new Set())
+      });
+    });
+    
     // Xử lý gửi tin nhắn từ các thiết bị
     socket.on('send-message', async (data) => {
       try {
         const { sessionId, message, sender } = data;
         console.log(`Received message from ${sender} in session ${sessionId}: ${message}`);
         
-        // Lưu tin nhắn vào cơ sở dữ liệu
+        // Lưu tin nhắn vào database
         const savedMessage = await storage.saveChatMessage({
-          sessionId,
-          content: message,
-          sender: sender || 'user',
-          timestamp: new Date(),
-          metadata: null
+          content: message.content,
+          sender: message.sender,
+          sessionId: message.sessionId,
+          metadata: undefined
         });
         
         // Chỉ gửi tin nhắn qua socket nếu nó là tin nhắn mới
@@ -163,8 +210,7 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
     
     // Xử lý ngắt kết nối
     socket.on('disconnect', (reason) => {
-      console.log('Client disconnected');
-      console.log(`Client disconnected: ${clientSessionId}, reason: ${reason}`);
+      console.log(`Client disconnected: ${clientSessionId || 'no-session'}, reason: ${reason}`);
       
       // Xử lý dọn dẹp tài nguyên nếu cần
       if (clientSessionId) {

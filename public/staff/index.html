@@ -40,10 +40,6 @@
                     <i class="fas fa-comments"></i>
                     <span>Hội thoại</span>
                 </a>
-                <a href="#" class="menu-item" data-section="stats">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Thống kê</span>
-                </a>
                 <a href="#" class="menu-item" data-section="templates">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Mẫu câu</span>
@@ -164,81 +160,12 @@
                             <div id="session-feedback" class="session-feedback" style="display: none;"></div>
                         </div>
                         <div class="header-actions">
-                            <!-- Nút Kết thúc phiên đã được xóa để tránh trùng lặp -->
+                            <!-- Nút xóa phiên đã được thêm trong JS -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Phần thống kê -->
-            <section id="stats-section" class="content-section">
-                <header class="content-header">
-                    <div class="header-title">
-                        <h2>Thống kê</h2>
-                        <p class="subtitle">Thông tin hiệu suất và thống kê phiên hỗ trợ</p>
-                    </div>
-                    <div class="header-actions">
-                        <select class="filter-select" id="stats-period-filter">
-                            <option value="today">Hôm nay</option>
-                            <option value="week">Tuần này</option>
-                            <option value="month">Tháng này</option>
-                            <option value="custom">Tùy chỉnh</option>
-                        </select>
-                    </div>
-                </header>
-
-                <div class="stats-dashboard">
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-comments"></i></div>
-                            <div class="stat-content">
-                                <h3>Tổng số phiên</h3>
-                                <p class="stat-value" id="total-sessions">0</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-content">
-                                <h3>Hoàn thành</h3>
-                                <p class="stat-value" id="completed-sessions">0</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                            <div class="stat-content">
-                                <h3>Thời gian trung bình</h3>
-                                <p class="stat-value" id="avg-response-time">0 phút</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-star"></i></div>
-                            <div class="stat-content">
-                                <h3>Đánh giá</h3>
-                                <p class="stat-value" id="avg-rating">0/5</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-charts">
-                        <div class="chart-container">
-                            <h3>Biểu đồ số phiên theo ngày</h3>
-                            <div class="loading-chart">Đang tải dữ liệu...</div>
-                        </div>
-                        
-                        <!-- Thêm phần góp ý đánh giá gần đây -->
-                        <div class="recent-ratings-container">
-                            <h3>Góp ý & Đánh giá gần đây</h3>
-                            <div id="recent-ratings">
-                                <div class="loading-chart">Đang tải dữ liệu...</div>
-                            </div>
-                        </div>
-                        
-                        <div id="staff-stats-container" class="staff-stats-container">
-                            <!-- Bảng thống kê nhân viên sẽ được thêm vào đây bằng JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <!-- Phần mẫu câu -->
             <section id="templates-section" class="content-section">

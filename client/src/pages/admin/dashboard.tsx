@@ -5,20 +5,48 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface Inquiry {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+interface Endpoint {
+  id: number;
+  name: string;
+  method: string;
+  path: string;
+  description: string;
+  authRequired: boolean;
+  isActive: boolean;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   
-  const { data: users, isLoading: isLoadingUsers } = useQuery({
+  const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
     enabled: user?.role === "admin",
   });
 
-  const { data: inquiries, isLoading: isLoadingInquiries } = useQuery({
+  const { data: inquiries, isLoading: isLoadingInquiries } = useQuery<Inquiry[]>({
     queryKey: ["/api/inquiries"],
     enabled: user?.role === "admin",
   });
 
-  const { data: endpoints, isLoading: isLoadingEndpoints } = useQuery({
+  const { data: endpoints, isLoading: isLoadingEndpoints } = useQuery<Endpoint[]>({
     queryKey: ["/api/endpoints"],
     enabled: user?.role === "admin",
   });
@@ -61,7 +89,7 @@ export default function Dashboard() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-light-darker text-sm font-medium">Total Users</p>
-                        <h3 className="text-3xl font-bold mt-2">{users?.length || 0}</h3>
+                        <h3 className="text-3xl font-bold mt-2">{users ? users.length : 0}</h3>
                         <p className="flex items-center mt-2 text-accent text-xs">
                           <i className="fas fa-user-plus mr-1"></i>
                           <span>Active accounts</span>
@@ -97,7 +125,7 @@ export default function Dashboard() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-light-darker text-sm font-medium">API Endpoints</p>
-                        <h3 className="text-3xl font-bold mt-2">{endpoints?.length || 0}</h3>
+                        <h3 className="text-3xl font-bold mt-2">{endpoints ? endpoints.length : 0}</h3>
                         <p className="flex items-center mt-2 text-accent text-xs">
                           <i className="fas fa-plug mr-1"></i>
                           <span>Active services</span>
@@ -115,7 +143,11 @@ export default function Dashboard() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-light-darker text-sm font-medium">New Inquiries</p>
-                        <h3 className="text-3xl font-bold mt-2">{inquiries?.filter(i => i.status === 'unread').length || 0}</h3>
+                        <h3 className="text-3xl font-bold mt-2">
+                          {inquiries 
+                            ? inquiries.filter((i: Inquiry) => i.status === 'unread').length 
+                            : 0}
+                        </h3>
                         <p className="flex items-center mt-2 text-accent text-xs">
                           <i className="fas fa-envelope mr-1"></i>
                           <span>Unread messages</span>
@@ -150,7 +182,7 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-dark-lighter">
-                          {users && users.slice(0, 5).map((user) => (
+                          {users && users.slice(0, 5).map((user: User) => (
                             <tr key={user.id} className="hover:bg-dark-lighter transition-colors">
                               <td className="px-3 py-3 whitespace-nowrap">
                                 <div className="flex items-center">
@@ -202,7 +234,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="space-y-4">
-                      {inquiries && inquiries.slice(0, 5).map((inquiry) => (
+                      {inquiries && inquiries.slice(0, 5).map((inquiry: Inquiry) => (
                         <div key={inquiry.id} className={`border-l-4 ${
                           inquiry.status === 'unread' ? 'border-danger' : 
                           inquiry.status === 'in-progress' ? 'border-warning' : 
@@ -210,9 +242,9 @@ export default function Dashboard() {
                         } pl-4 py-1`}>
                           <div className="flex justify-between">
                             <span className="text-xs text-light-darker">
-                              {new Date(inquiry.createdAt!).toLocaleDateString()} 
+                              {new Date(inquiry.createdAt).toLocaleDateString()} 
                               {' '}
-                              {new Date(inquiry.createdAt!).toLocaleTimeString()}
+                              {new Date(inquiry.createdAt).toLocaleTimeString()}
                             </span>
                             <span className={`text-xs ${
                               inquiry.status === 'unread' ? 'bg-danger/20 text-danger' : 

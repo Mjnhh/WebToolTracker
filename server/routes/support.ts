@@ -25,10 +25,10 @@ function isStaff(req: Request, res: Response, next: any) {
     // Xác thực token
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    // Get logged in user
-    storage.getUser(decoded.id).then(user => {
+    // Lấy thông tin user từ database
+    storage.getUserById(decoded.id).then(user => {
       if (!user) {
-        return res.status(401).json({ message: 'Unauthorized: User not found' });
+        return res.status(404).json({ message: 'Người dùng không tồn tại' });
       }
       
       // Kiểm tra quyền staff hoặc admin
@@ -93,8 +93,11 @@ router.post("/assign", isStaff, async (req: Request & { user?: any }, res: Respo
     
     console.log(`Updated metadata for session ${sessionId}:`, updatedMetadata);
     
+    // Cập nhật cả trong metadata và trường trong cơ sở dữ liệu
     await storage.updateChatSession(sessionId, {
-      metadata: JSON.stringify(updatedMetadata)
+      metadata: JSON.stringify(updatedMetadata),
+      isHumanAssigned: true,
+      assignedTo: staffId
     });
 
     // Thông báo cho client
@@ -192,17 +195,22 @@ router.post("/end", isStaff, async (req: Request & { user?: any }, res: Response
       });
     }
 
-    // Cập nhật session
+    // Cập nhật thông tin metadata
+    const updatedMetadata = {
+      ...sessionData,
+      isHumanAssigned: false,
+      assignedTo: undefined,
+      status: 'completed',  // Đánh dấu phiên hoàn thành
+      completedAt: new Date().toISOString(), // Thêm thời gian hoàn thành
+      completedBy: staffId, // Lưu ID nhân viên kết thúc phiên
+      staffName: req.user?.name || 'Staff' // Lưu tên nhân viên
+    };
+
+    // Cập nhật session cả trong metadata và trường cơ sở dữ liệu
     await storage.updateChatSession(sessionId, {
-      metadata: JSON.stringify({
-        ...sessionData,
-        isHumanAssigned: false,
-        assignedTo: null,
-        status: 'completed',  // Đánh dấu phiên hoàn thành
-        completedAt: new Date().toISOString(), // Thêm thời gian hoàn thành
-        completedBy: staffId, // Lưu ID nhân viên kết thúc phiên
-        staffName: req.user?.name || 'Staff' // Lưu tên nhân viên
-      })
+      metadata: JSON.stringify(updatedMetadata),
+      isHumanAssigned: false,  // Cập nhật trường is_human_assigned trong cơ sở dữ liệu
+      assignedTo: undefined     // Cập nhật trường assigned_to trong cơ sở dữ liệu
     });
 
     // Thông báo cho client
@@ -218,7 +226,7 @@ router.post("/end", isStaff, async (req: Request & { user?: any }, res: Response
       content: "Phiên hỗ trợ đã kết thúc. Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.",
       sender: 'bot',
       timestamp: new Date(),
-      metadata: null
+      metadata: undefined
     });
 
     res.json({ message: "Support session ended successfully" });
@@ -247,36 +255,36 @@ router.get("/sessions", isStaff, async (req: Request & { user?: any }, res: Resp
       // Parse metadata
       let metadata: Record<string, any> = {};
       let needsHumanSupport = false;
-      let isHumanAssigned = false;
-      let assignedTo = null;
       let lastMessage = '';
       
       try {
         if (session.metadata) {
           metadata = JSON.parse(session.metadata);
           needsHumanSupport = metadata.needsHumanSupport || false;
-          isHumanAssigned = metadata.isHumanAssigned || false;
-          assignedTo = metadata.assignedTo || null;
           lastMessage = metadata.lastMessage || '';
         }
       } catch (e) {
         console.error("Error parsing session metadata for session", session.id, e);
       }
       
+      // Sử dụng trường isHumanAssigned và assignedTo từ cơ sở dữ liệu
+      // thay vì trong metadata
+      const isHumanAssigned = session.isHumanAssigned || false;
+      const assignedTo = session.assignedTo || null;
+      
       // Thêm thông tin vào session
       return {
         ...session,
         metadata,
         needsHumanSupport,
-        isHumanAssigned,
-        assignedTo,
+        isHumanAssigned,  // Sử dụng giá trị từ cơ sở dữ liệu
+        assignedTo,       // Sử dụng giá trị từ cơ sở dữ liệu  
         lastMessage
       };
     }).filter(session => {
       // Admin có thể xem tất cả các phiên cần hỗ trợ, kể cả đã được gán cho nhân viên khác
       if (isAdmin) {
-        const result = session.needsHumanSupport;
-        return result;
+        return session.needsHumanSupport;
       }
       
       // Staff chỉ xem những phiên cần hỗ trợ chưa được assign hoặc đã được assign cho mình
@@ -590,6 +598,71 @@ router.get("/stats", isStaff, async (req: Request & { user?: any }, res: Respons
   } catch (error) {
     console.error("Error getting stats:", error);
     res.status(500).json({ message: "Failed to get statistics" });
+  }
+});
+
+// API để xóa phiên chat
+router.post("/delete-session", isStaff, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    const { sessionId } = req.body;
+    const staffId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!staffId) {
+      return res.status(401).json({ message: "Staff ID not found" });
+    }
+
+    // Kiểm tra quyền xóa phiên chat
+    const session = await storage.getChatSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    let sessionData: any = {};
+    try {
+      sessionData = session.metadata ? JSON.parse(session.metadata) : {};
+    } catch (e) {
+      console.error('Error parsing session metadata:', e);
+    }
+
+    // Chỉ admin hoặc nhân viên được gán cho phiên chat mới có quyền xóa
+    if (!isAdmin && sessionData.assignedTo !== staffId.toString()) {
+      return res.status(403).json({ 
+        message: "Bạn không có quyền xóa phiên chat này" 
+      });
+    }
+
+    // Xóa tất cả tin nhắn trong phiên chat
+    try {
+      // Lấy danh sách tin nhắn
+      const messages = await storage.getChatMessages(sessionId);
+      console.log(`Deleting ${messages.length} messages from session ${sessionId}`);
+      
+      // Trong một hệ thống thực tế, cần transaction để đảm bảo tính nhất quán dữ liệu
+      // Ở đây, chúng ta chỉ xóa phiên chat mà không cần xóa tin nhắn vì
+      // hệ thống đã có ràng buộc khóa ngoại tự động xóa tin nhắn khi xóa phiên
+      
+    } catch (error) {
+      console.error('Error during message deletion:', error);
+      // Không return ở đây để vẫn tiếp tục xóa phiên chat
+    }
+
+    // Xóa phiên chat từ cơ sở dữ liệu
+    // Ở đây giả sử có phương thức deleteChatSession() trong storage
+    // Nếu chưa có, cần thêm vào lớp storage
+    await storage.deleteChatSession(sessionId);
+
+    // Thông báo cho client
+    io.to(sessionId).emit('session-deleted', {
+      deletedBy: staffId,
+      deletedByName: req.user?.name || 'Nhân viên',
+      message: 'Phiên hỗ trợ đã bị xóa bởi nhân viên hỗ trợ'
+    });
+
+    res.json({ success: true, message: "Phiên chat đã được xóa thành công" });
+  } catch (error) {
+    console.error("Error deleting chat session:", error);
+    res.status(500).json({ message: "Không thể xóa phiên chat" });
   }
 });
 

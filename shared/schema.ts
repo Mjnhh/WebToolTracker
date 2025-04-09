@@ -17,7 +17,6 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   email: true,
   name: true,
-  role: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -108,3 +107,129 @@ export const insertChatSessionSchema = createInsertSchema(chatSessions).pick({
 
 export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
 export type ChatSession = typeof chatSessions.$inferSelect;
+
+export interface Message {
+  id: number;
+  sessionId: string;
+  sender: string;
+  content: string;
+  timestamp: Date;
+  createdAt: Date;
+}
+
+export interface InsertMessage {
+  sessionId: string;
+  sender: string;
+  content: string;
+  timestamp?: Date;
+  metadata?: string;
+}
+
+export interface Voucher {
+  id: number;
+  code: string;
+  discountPercent: number;
+  expiresAt: Date;
+  isUsed: boolean;
+  usedAt?: Date;
+  createdAt: Date;
+  metadata?: string;
+}
+
+export interface InsertVoucher {
+  code: string;
+  discountPercent: number;
+  expiresAt: Date;
+  metadata?: string;
+}
+
+export interface ChatbotPattern {
+  id: number;
+  pattern: string;
+  response: string;
+  score: number;
+}
+
+export interface InsertChatbotPattern {
+  pattern: string;
+  response: string;
+  score?: number;
+}
+
+export interface UpdateUser {
+  username?: string;
+  email?: string;
+  password?: string;
+  role?: string;
+  name?: string;
+}
+
+export interface UpdateInquiry {
+  status?: string;
+}
+
+export interface UpdateEndpoint {
+  method?: string;
+  path?: string;
+  description?: string;
+  authRequired?: boolean;
+  isActive?: boolean;
+}
+
+export interface UpdateChatSession {
+  userId?: number;
+  metadata?: string;
+  lastActivity?: Date;
+  isHumanAssigned?: boolean;
+  assignedTo?: number;
+}
+
+export interface IStorage {
+  // User operations
+  getUser(id: number): Promise<User | null>;
+  getUserById(id: number): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: UpdateUser): Promise<User | null>;
+  getAllUsers(): Promise<User[]>;
+  
+  // Inquiry operations
+  createInquiry(inquiry: InsertInquiry): Promise<Inquiry>;
+  getInquiry(id: number): Promise<Inquiry | null>;
+  getAllInquiries(): Promise<Inquiry[]>;
+  updateInquiryStatus(id: number, status: string): Promise<Inquiry | null>;
+  deleteInquiry(id: number): Promise<boolean>;
+  
+  // Endpoint operations
+  createEndpoint(endpoint: InsertEndpoint): Promise<Endpoint>;
+  getEndpoint(id: number): Promise<Endpoint | null>;
+  getAllEndpoints(): Promise<Endpoint[]>;
+  updateEndpoint(id: number, endpoint: UpdateEndpoint): Promise<Endpoint | null>;
+  deleteEndpoint(id: number): Promise<boolean>;
+  
+  // Chat operations
+  createChatSession(session: InsertChatSession): Promise<ChatSession>;
+  getChatSession(sessionId: string): Promise<ChatSession | null>;
+  getAllChatSessions(): Promise<ChatSession[]>;
+  updateChatSession(sessionId: string, session: UpdateChatSession): Promise<ChatSession | null>;
+  saveChatMessage(message: InsertMessage): Promise<Message>;
+  getChatMessages(sessionId: string): Promise<Message[]>;
+  deleteChatSession(sessionId: string): Promise<boolean>;
+
+  // Voucher operations
+  createVoucher(voucher: InsertVoucher): Promise<Voucher>;
+  getVoucher(code: string): Promise<Voucher | null>;
+  getAllVouchers(): Promise<Voucher[]>;
+  useVoucher(code: string, userId: number): Promise<boolean>;
+
+  // Chatbot pattern operations
+  saveLearningPattern(pattern: string, response: string): Promise<void>;
+  updatePatternScore(pattern: string, score: number): Promise<void>;
+  getAllPatterns(): Promise<ChatbotPattern[]>;
+  getPattern(pattern: string): Promise<ChatbotPattern | null>;
+  deletePattern(pattern: string): Promise<boolean>;
+  
+  getVoucherByCode(code: string): Promise<Voucher | null>;
+  markVoucherAsUsed(code: string): Promise<Voucher | null>;
+}

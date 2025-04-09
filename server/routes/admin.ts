@@ -107,6 +107,10 @@ router.patch("/users/:id", isAdmin, async (req, res, next) => {
     // Cập nhật user
     const updatedUser = await storage.updateUser(id, updateData);
     
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
     // Loại bỏ trường password trước khi gửi về client
     const { password: _, ...userWithoutPassword } = updatedUser;
     res.json(userWithoutPassword);
@@ -179,7 +183,26 @@ router.delete("/inquiries/:id", isAdmin, async (req, res, next) => {
 router.get("/endpoints", isAdmin, async (req, res, next) => {
   try {
     const endpoints = await storage.getAllEndpoints();
-    res.json(endpoints);
+    
+    // Chuyển đổi tên trường, đảm bảo các trường đúng định dạng camelCase
+    const formattedEndpoints = endpoints.map(endpoint => {
+      // Sử dụng as any để tránh lỗi TypeScript khi truy cập các trường không được định nghĩa rõ ràng
+      const ep = endpoint as any;
+      
+      return {
+        id: ep.id,
+        name: ep.name,
+        method: ep.method,
+        path: ep.path,
+        description: ep.description,
+        // Xác định các trường từ database và chuyển đổi sang camelCase
+        authRequired: typeof ep.authRequired !== 'undefined' ? ep.authRequired : ep.auth_required,
+        isActive: typeof ep.isActive !== 'undefined' ? ep.isActive : ep.is_active,
+        createdAt: ep.createdAt || ep.created_at
+      };
+    });
+    
+    res.json(formattedEndpoints);
   } catch (error) {
     next(error);
   }
@@ -309,6 +332,36 @@ router.delete("/chatbot/patterns/:pattern", isAdmin, async (req, res, next) => {
     }
     
     res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Admin - Lấy chi tiết một endpoint
+router.get("/endpoints/:id", isAdmin, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const endpoint = await storage.getEndpoint(id);
+    
+    if (!endpoint) {
+      return res.status(404).json({ message: "Endpoint not found" });
+    }
+    
+    // Chuyển đổi tên trường
+    const ep = endpoint as any;
+    const formattedEndpoint = {
+      id: ep.id,
+      name: ep.name,
+      method: ep.method,
+      path: ep.path,
+      description: ep.description,
+      // Xác định các trường từ database và chuyển đổi sang camelCase
+      authRequired: typeof ep.authRequired !== 'undefined' ? ep.authRequired : ep.auth_required,
+      isActive: typeof ep.isActive !== 'undefined' ? ep.isActive : ep.is_active,
+      createdAt: ep.createdAt || ep.created_at
+    };
+    
+    res.json(formattedEndpoint);
   } catch (error) {
     next(error);
   }

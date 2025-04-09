@@ -46,6 +46,16 @@ const endpointSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+interface Endpoint {
+  id: number;
+  name: string;
+  method: string;
+  path: string;
+  description: string;
+  authRequired: boolean;
+  isActive: boolean;
+}
+
 export default function ApiEndpoints() {
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,7 +75,7 @@ export default function ApiEndpoints() {
     },
   });
 
-  const { data: endpoints, isLoading } = useQuery({
+  const { data: endpoints, isLoading, refetch } = useQuery<Endpoint[]>({
     queryKey: ["/api/endpoints"],
   });
 
@@ -238,7 +248,7 @@ export default function ApiEndpoints() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-dark-lighter">
-                      {endpoints && endpoints.map((endpoint: any) => (
+                      {endpoints && endpoints.map((endpoint: Endpoint) => (
                         <tr key={endpoint.id} className="hover:bg-dark-lighter transition-colors">
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium">{endpoint.name}</div>

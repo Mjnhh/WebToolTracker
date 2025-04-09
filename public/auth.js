@@ -150,6 +150,9 @@ function setupLogoutButton() {
     // Remove token from localStorage
     localStorage.removeItem('token');
     
+    // Dispatch event for chatbot to clear session
+    window.dispatchEvent(new Event('user-auth-change'));
+    
     // Reload page to update UI
     window.location.href = '/login.html';
   });
@@ -180,6 +183,10 @@ function setupLoginForm() {
     .then(data => {
       // Lưu token vào localStorage
       localStorage.setItem('token', data.token);
+      
+      // Dispatch event for chatbot to clear session
+      window.dispatchEvent(new Event('user-auth-change'));
+      
       // Chuyển hướng về trang chính
       window.location.href = '/coding-team-website.html';
     })

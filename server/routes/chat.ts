@@ -4,18 +4,32 @@ import { ChatbotService } from "../services/chatbot";
 import { storage } from "../storage";
 import { InsertChatSession } from "../types";
 import { getSocketServer } from "../io";
+import { optionalAuth } from "../middleware/auth";
 
 const router = express.Router();
 const chatbotService = new ChatbotService(storage);
 
+// Áp dụng middleware optionalAuth cho tất cả các route chat
+router.use(optionalAuth);
+
 // Khởi tạo chat session mới
-router.post("/session", async (req: Request, res: Response) => {
+router.post("/session", async (req: Request & { user?: any }, res: Response) => {
   try {
     const { metadata } = req.body;
+    const metadataObj = metadata ? JSON.parse(metadata) : {};
+    
+    // Add user info if authenticated
+    if (req.user) {
+      metadataObj.userId = req.user.id;
+      metadataObj.username = req.user.username;
+    }
+    
     const sessionData: InsertChatSession = {
       id: Math.random().toString(36).substring(2) + Date.now().toString(36),
-      metadata: metadata || null
+      userId: req.user?.id || null,
+      metadata: JSON.stringify(metadataObj)
     };
+    
     const session = await storage.createChatSession(sessionData);
     res.json(session);
   } catch (error) {
@@ -115,7 +129,7 @@ router.post("/session/:sessionId/message", async (req: Request, res: Response) =
       content: message,
       sender,
       timestamp: new Date(),
-      metadata: null
+      metadata: undefined
     });
     
     // Phát tín hiệu realtime về tin nhắn mới thông qua Socket.IO
@@ -155,37 +169,53 @@ router.post("/session/:sessionId/message", async (req: Request, res: Response) =
       // Nếu cần chuyển sang nhân viên hỗ trợ
       if (requiresHumanSupport) {
         // Cập nhật session để đánh dấu cần hỗ trợ từ nhân viên
-        await storage.updateChatSession(sessionId, { 
-          metadata: JSON.stringify({
-            ...sessionMetadata,
-            needsHumanSupport: true,
-            lastMessage: message,
-            lastIntent: context?.intent || 'human_support',
-            lastActivity: new Date().toISOString()
-          })
-        });
+        const updatedMetadata = {
+          ...sessionMetadata,
+          needsHumanSupport: true,
+          lastMessage: message,
+          lastIntent: context?.intent || 'human_support',
+          lastActivity: new Date().toISOString()
+        };
         
-        console.log(`Session updated successfully: ${sessionId}`);
-        console.log(`Sending support request to staff channel: ${sessionId}`);
-        
-        // Thông báo cho nhân viên support về phiên chat mới cần hỗ trợ
-        if (getSocketServer()) {
-          const staffAvailable = getSocketServer().of('/').adapter.rooms.has('support-staff');
-          console.log(`Staff Socket Server available: ${staffAvailable}`);
+        try {
+          await storage.updateChatSession(sessionId, { 
+            metadata: JSON.stringify(updatedMetadata),
+            lastActivity: new Date()
+          });
           
-          const supportData = {
-            id: sessionId,
-            sessionId,
-            lastMessage: message,
-            timestamp: new Date(),
-            needsHumanSupport: true,
-            startedAt: session.startedAt,
-            lastActivity: new Date(),
-            metadata: sessionMetadata
-          };
+          console.log(`Session updated successfully: ${sessionId} - needsHumanSupport set to true`);
+          console.log(`Sending support request to staff channel: ${sessionId}`);
           
-          console.log(`Emitting new-support-request with data: ${JSON.stringify(supportData)}`);
-          getSocketServer().to('support-staff').emit('new-support-request', supportData);
+          // Thông báo cho nhân viên support về phiên chat mới cần hỗ trợ
+          if (getSocketServer()) {
+            const staffAvailable = getSocketServer().of('/').adapter.rooms.has('support-staff');
+            console.log(`Staff Socket Server available: ${staffAvailable}`);
+            console.log(`Staff room members: ${JSON.stringify(getSocketServer().of('/').adapter.rooms.get('support-staff') || 'none')}`);
+            
+            const supportData = {
+              id: sessionId,
+              sessionId,
+              lastMessage: message,
+              timestamp: new Date(),
+              needsHumanSupport: true,
+              startedAt: session.startedAt,
+              lastActivity: new Date(),
+              metadata: sessionMetadata
+            };
+            
+            console.log(`Emitting new-support-request with data: ${JSON.stringify(supportData)}`);
+            getSocketServer().to('support-staff').emit('new-support-request', supportData);
+            
+            // Thêm một broadcast rõ ràng
+            getSocketServer().emit('broadcast-support-request', {
+              message: `Có phiên chat mới cần hỗ trợ - ID: ${sessionId}`,
+              sessionId: sessionId
+            });
+          } else {
+            console.error('Socket server not available, cannot notify staff about new support request');
+          }
+        } catch (error) {
+          console.error(`Error updating chat session ${sessionId}:`, error);
         }
       }
       
@@ -302,7 +332,7 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
       content: `Khách hàng đã đánh giá phiên hỗ trợ với ${rating}/5 sao.`,
       sender: 'system',
       timestamp: new Date(),
-      metadata: null
+      metadata: undefined
     });
 
     // Trả về kết quả thành công

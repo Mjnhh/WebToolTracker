@@ -618,114 +618,139 @@ function initializeSpotifyFeature() {
 
 // Khởi tạo kết nối socket
 function initializeSocket() {
-  const token = localStorage.getItem('auth_token');
-  if (!token) return;
-
-  socket = io({
-    query: { token }
-  });
-
-  socket.on('connect', () => {
-    console.log('Socket connected successfully');
-    socket.emit('join-room', 'support-staff');
-  });
-
-  socket.on('new-support-request', (session) => {
-    console.log('Received new support request:', session);
+  try {
+    console.log('Initializing socket connection');
+    const token = getToken();
     
-    // Phát âm thanh thông báo
-    playNotificationSound('new-session');
+    // Khởi tạo kết nối socket với token và thông tin user
+    socket = io({
+      auth: {
+        token: token
+      },
+      query: {
+        type: 'staff'
+      }
+    });
     
-    // Hiển thị thông báo desktop
-    showDesktopNotification('Phiên chat mới', 'Có khách hàng mới cần hỗ trợ');
+    console.log('Socket connection initialized, waiting for connect event');
     
-    // Thêm session mới vào danh sách
-    if (!sessionList.some(s => s.id === session.id)) {
-      sessionList.push(session);
-      updateSessionsList();
+    // Xử lý sự kiện kết nối
+    socket.on('connect', () => {
+      console.log('Socket connected successfully');
       
-      // Kiểm tra và gửi tin nhắn tự động nếu đã bật
-      if (localStorage.getItem('auto-reply') === 'true') {
-        sendAutoReply(session.id);
-      }
-    }
-  });
-
-  // Lắng nghe tin nhắn mới từ socket
-  socket.on('new-message', (message) => {
-    console.log('Nhận tin nhắn mới qua socket:', message);
-    
-    // Thông báo khi có tin nhắn mới từ khách hàng
-    if (message.sender === 'user') {
-      // Phát âm thanh thông báo
-      playNotificationSound('message');
+      // Tham gia kênh support-staff để nhận thông báo về các phiên chat mới
+      socket.emit('join-room', 'support-staff');
+      console.log('Joined support-staff room');
       
-      // Hiển thị thông báo desktop nếu không phải là phiên đang mở
-      if (message.sessionId !== currentSessionId) {
-        showDesktopNotification('Tin nhắn mới', 'Có tin nhắn mới từ khách hàng');
+      // Debug - kiểm tra xem đã tham gia room chưa
+      setTimeout(() => {
+        socket.emit('check-room-membership', { room: 'support-staff' });
+      }, 2000);
+      
+      // Thông báo hệ thống đã sẵn sàng
+      showNotification('Kết nối với máy chủ thành công', 'success');
+    });
+    
+    // Xử lý phiên mới cần hỗ trợ
+    socket.on('new-support-request', (data) => {
+      console.log('Received new support request', data);
+      
+      // Thêm vào danh sách phiên nếu chưa có
+      const sessionIndex = sessionList.findIndex(s => s.id === data.id);
+      if (sessionIndex === -1) {
+        // Thêm phiên mới vào đầu danh sách
+        sessionList.unshift(data);
+      } else {
+        // Cập nhật phiên hiện có
+        sessionList[sessionIndex] = { ...sessionList[sessionIndex], ...data };
       }
-    }
+      
+      // Cập nhật UI
+      renderSessionList(sessionList);
+      
+      // Hiển thị thông báo
+      showNotification(`Phiên chat mới cần hỗ trợ: ${data.id.substring(0, 8)}...`, 'info');
+      showDesktopNotification('Yêu cầu hỗ trợ mới', `Có khách hàng đang cần hỗ trợ: ${data.id.substring(0, 8)}...`);
+      playNotificationSound('new-session');
+    });
     
-    // Kiểm tra xem tin nhắn có thuộc phiên hiện tại và có ID hợp lệ không
-    if (!message || !message.id || !message.sessionId || message.sessionId !== currentSessionId) {
-      return;
-    }
-    
-    // 1. Kiểm tra xem tin nhắn này có phải là từ mình gửi đi không
-    const isSelfMessage = message.sender === 'staff';
-    
-    // 2. Tìm tin nhắn tạm thời tương ứng
-    const tempId = tempMessageMap.get(message.id);
-    if (tempId) {
-      console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
-      // Cập nhật ID
-      const tempElement = document.querySelector(`.message-item[data-temp-ref="${message.id}"]`);
-      if (tempElement) {
-        tempElement.dataset.messageId = message.id;
-        delete tempElement.dataset.tempRef;
-        
-        // Đánh dấu tin nhắn đã được xử lý
-        receivedMessageIds.add(message.id);
-        
-        // Xóa khỏi map tạm thời
-        tempMessageMap.delete(message.id);
-        return;
-      }
-    }
-    
-    // 3. Kiểm tra xem tin nhắn đã hiển thị chưa
-    if (receivedMessageIds.has(message.id)) {
-      console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
-      return;
-    }
-    
-    // 4. Nếu là tin nhắn do mình gửi (staff) và không tìm thấy bản tạm, kiểm tra lần cuối
-    if (isSelfMessage) {
-      // Tìm tất cả tin nhắn của staff trong DOM để tránh trường hợp trùng lặp
-      const existingStaffMessages = document.querySelectorAll('.message.staff.message-item');
-      for (let msgElem of existingStaffMessages) {
-        // Kiểm tra nội dung và thời gian để tránh hiển thị trùng lặp
-        const contentElem = msgElem.querySelector('.content');
-        if (contentElem && contentElem.textContent === message.content) {
-          console.log(`Phát hiện tin nhắn staff trùng nội dung, bỏ qua: "${message.content}"`);
-          receivedMessageIds.add(message.id);
-          return;
+    // Nhận danh sách phiên đang chờ hỗ trợ
+    socket.on('pending-support-sessions', (sessions) => {
+      console.log(`Received ${sessions.length} pending support sessions:`, sessions);
+      
+      // Thêm vào danh sách phiên
+      let hasNewSessions = false;
+      
+      sessions.forEach(session => {
+        // Chỉ thêm nếu chưa có trong danh sách
+        const sessionIndex = sessionList.findIndex(s => s.id === session.id);
+        if (sessionIndex === -1) {
+          sessionList.push(session);
+          hasNewSessions = true;
         }
+      });
+      
+      // Cập nhật UI nếu có phiên mới
+      if (hasNewSessions) {
+        renderSessionList(sessionList);
+        showNotification(`Có ${sessions.length} phiên chat đang chờ hỗ trợ`, 'info');
       }
-    }
+    });
     
-    // 5. Nếu là tin nhắn mới thật sự, thêm vào màn hình
-    receivedMessageIds.add(message.id);
-    appendMessage(message);
-    scrollToBottom();
+    // Xử lý sự kiện broadcast-support-request (thêm mới)
+    socket.on('broadcast-support-request', (data) => {
+      console.log('Received broadcast support request', data);
+      fetchSupportSessions(); // Tải lại danh sách phiên
+      
+      // Hiển thị thông báo
+      showNotification(data.message, 'info');
+      showDesktopNotification('Yêu cầu hỗ trợ mới', data.message);
+      playNotificationSound('new-session');
+    });
     
-    // Cập nhật danh sách phiên với tin nhắn mới
-    updateSessionWithNewMessage(message);
-  });
-
-  socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error);
-  });
+    // Debug - nhận kết quả kiểm tra tư cách thành viên phòng
+    socket.on('room-membership-result', (data) => {
+      console.log('Room membership check result:', data);
+    });
+    
+    // Xử lý tin nhắn mới
+    socket.on('new-message', (message) => {
+      handleNewMessage(message);
+    });
+    
+    // Xử lý đánh giá mới
+    socket.on('new-rating', (data) => {
+      console.log('New rating received:', data);
+      updateSessionWithRating(data.sessionId, data);
+    });
+    
+    // Xử lý lỗi kết nối
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      showNotification('Lỗi kết nối với máy chủ: ' + error.message, 'error');
+    });
+    
+    // Xử lý mất kết nối
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        // Máy chủ chủ động ngắt kết nối
+        showNotification('Mất kết nối với máy chủ: ' + reason, 'warning');
+        setTimeout(() => {
+          socket.connect(); // Thử kết nối lại
+        }, 5000);
+      } else if (reason === 'transport close') {
+        // Mất kết nối mạng
+        showNotification('Mất kết nối mạng, đang thử kết nối lại...', 'warning');
+      }
+    });
+  } catch (error) {
+    console.error('Error initializing socket:', error);
+    showNotification('Lỗi khởi tạo kết nối socket: ' + error.message, 'error');
+    
+    // Thử khởi tạo lại sau 10 giây
+    setTimeout(initializeSocket, 10000);
+  }
 }
 
 // Hàm khởi tạo khi tải xong trang
@@ -812,46 +837,57 @@ function setupEventListeners() {
   if (loginSubmit) {
     loginSubmit.addEventListener('click', handleLogin);
   }
-
+  
+  // Nhấn Enter để đăng nhập
+  const passwordInput = document.getElementById('password');
+  if (passwordInput) {
+    passwordInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        handleLogin(e);
+      }
+    });
+  }
+  
   // Sự kiện đăng xuất
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
   }
-
+  
   // Lọc phiên chat
   const sessionFilter = document.getElementById('session-filter');
   if (sessionFilter) {
     sessionFilter.addEventListener('change', filterSessions);
   }
 
-  // Gửi tin nhắn
-  const sendMessageBtn = document.getElementById('send-message-btn');
-  if (sendMessageBtn) {
-    sendMessageBtn.addEventListener('click', sendMessage);
-  }
-
-  // Enter để gửi tin nhắn
-  const chatInput = document.getElementById('chat-input');
-  if (chatInput) {
-    chatInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
+  // Cài đặt dark mode toggle
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  if (darkModeToggle) {
+    const savedDarkMode = localStorage.getItem('dark-mode') === 'true';
+    darkModeToggle.checked = savedDarkMode;
+    
+    if (savedDarkMode) {
+      document.body.classList.add('dark-mode');
+    }
+    
+    darkModeToggle.addEventListener('change', function() {
+      if (this.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('dark-mode', 'true');
+      } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('dark-mode', 'false');
       }
     });
   }
-
-  // Kết thúc phiên
-  const endSessionBtn = document.getElementById('end-session-btn');
-  if (endSessionBtn) {
-    endSessionBtn.addEventListener('click', endSession);
-  }
-
-  // Thiết lập chuyển tab
-  setupTabNavigation();
   
-  // Thiết lập cài đặt
+  // Kiểm tra sự kiện nút xóa phiên trong phần chat header
+  const headerDeleteBtn = document.getElementById('delete-session-btn');
+  if (headerDeleteBtn) {
+    headerDeleteBtn.addEventListener('click', deleteSession);
+  }
+  
+  // Thiết lập sự kiện cho các cài đặt khác
   setupSettings();
 }
 
@@ -877,12 +913,6 @@ function setupTabNavigation() {
       if (contentSection) {
         contentSection.classList.add('active');
         
-        // Nếu chuyển sang tab thống kê, tải dữ liệu thống kê
-        if (targetSection === 'stats') {
-          const statsFilter = document.getElementById('stats-period-filter');
-          const period = statsFilter ? statsFilter.value : 'today';
-          fetchStats(period);
-        }
         
         // Nếu chuyển sang tab mẫu câu, khởi tạo các sự kiện mẫu câu
         if (targetSection === 'templates') {
@@ -895,7 +925,7 @@ function setupTabNavigation() {
 
 // Thiết lập cài đặt
 function setupSettings() {
-  // Dark mode toggle
+  // Dark mode toggle - Using the same implementation as above
   const darkModeToggle = document.getElementById('dark-mode-toggle');
   if (darkModeToggle) {
     // Kiểm tra cài đặt đã lưu
@@ -906,8 +936,8 @@ function setupSettings() {
       document.body.classList.add('dark-mode');
     }
     
-    darkModeToggle.addEventListener('change', () => {
-      if (darkModeToggle.checked) {
+    darkModeToggle.addEventListener('change', function() {
+      if (this.checked) {
         document.body.classList.add('dark-mode');
         localStorage.setItem('dark-mode', 'true');
       } else {
@@ -1743,10 +1773,35 @@ function fetchSupportSessions() {
   })
   .then(data => {
     console.log('Received sessions:', data); // Log để debug
-    sessionList = data;
     
     // Lọc các phiên không hợp lệ
-    sessionList = sessionList.filter(session => session && session.id);
+    const newSessions = data.filter(session => session && session.id);
+    
+    // Lưu thứ tự hiện tại và thêm vào các phiên mới
+    if (sessionList.length === 0) {
+      // Trường hợp danh sách trống, sắp xếp theo thời gian mới nhất
+      sessionList = newSessions.sort((a, b) => {
+        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+      });
+    } else {
+      // Trường hợp danh sách có dữ liệu, giữ nguyên thứ tự hiện tại và thêm phiên mới vào đầu
+      const existingIds = new Set(sessionList.map(s => s.id));
+      const brandNewSessions = newSessions.filter(s => !existingIds.has(s.id));
+      
+      // Cập nhật thông tin cho các phiên đã có
+      sessionList = sessionList.map(existingSession => {
+        const updatedSession = newSessions.find(s => s.id === existingSession.id);
+        return updatedSession || existingSession; // Ưu tiên phiên cập nhật, nếu không có thì giữ phiên cũ
+      });
+      
+      // Thêm các phiên mới vào đầu danh sách
+      if (brandNewSessions.length > 0) {
+        const sortedNewSessions = brandNewSessions.sort((a, b) => {
+          return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+        });
+        sessionList = [...sortedNewSessions, ...sessionList];
+      }
+    }
     
     if (sessionList.length === 0) {
       const sessionsContainer = document.getElementById('sessions-list');
@@ -1818,8 +1873,12 @@ function renderSessionList(sessions) {
       <div class="session-time">${sessionTime}</div>
     `;
 
-    // Sự kiện khi click vào phiên
-    sessionItem.addEventListener('click', () => selectSession(session.id));
+    // Sự kiện khi click vào phiên - chỉ chọn phiên, không sắp xếp lại
+    sessionItem.addEventListener('click', (e) => {
+      e.preventDefault();
+      selectSession(session.id);
+      return false;
+    });
 
     if (sessionContainer) sessionContainer.appendChild(sessionItem);
   });
@@ -1856,13 +1915,15 @@ function filterSessions() {
 function selectSession(sessionId) {
   currentSessionId = sessionId;
 
-  // Đánh dấu phiên đang chọn
+  // Đánh dấu phiên đang chọn nhưng không reorder
   document.querySelectorAll('.session-item').forEach(item => {
     item.classList.remove('active');
     if (item.dataset.sessionId === sessionId) {
       item.classList.add('active');
     }
   });
+  
+  // Giữ nguyên thứ tự hiển thị, không sắp xếp lại danh sách
 
   // Ẩn thông báo chưa chọn phiên
   const noSessionSelected = document.querySelector('.no-chat-selected');
@@ -1883,6 +1944,10 @@ function selectSession(sessionId) {
             <button id="end-session-btn" class="chat-header-button end-session-btn" title="Kết thúc phiên">
               <i class="fas fa-times-circle"></i>
               <span>Kết thúc phiên</span>
+            </button>
+            <button id="delete-chat-session-btn" class="chat-header-button delete-session-btn" title="Xóa phiên">
+              <i class="fas fa-trash"></i>
+              <span>Xóa phiên</span>
             </button>
           </div>
         </div>
@@ -1921,6 +1986,12 @@ function selectSession(sessionId) {
     const endSessionBtn = document.getElementById('end-session-btn');
     if (endSessionBtn) {
       endSessionBtn.addEventListener('click', endSession);
+    }
+    
+    // Thêm event handler cho nút xóa phiên
+    const deleteSessionBtn = document.getElementById('delete-chat-session-btn');
+    if (deleteSessionBtn) {
+      deleteSessionBtn.addEventListener('click', deleteSession);
     }
 
     // Thiết lập câu trả lời nhanh
@@ -2395,18 +2466,19 @@ function updateSessionInfo(sessionId) {
 function updateSessionWithNewMessage(message) {
   // Tìm phiên trong danh sách
   const sessionIndex = sessionList.findIndex(s => s.id === message.sessionId);
-  if (sessionIndex === -1) return;
+  
+  // Nếu không tìm thấy phiên, có thể đây là phiên mới
+  if (sessionIndex === -1) {
+    // Gọi API để cập nhật lại toàn bộ danh sách
+    fetchSupportSessions();
+    return;
+  }
 
   // Cập nhật tin nhắn cuối cùng
   sessionList[sessionIndex].lastMessage = message;
   sessionList[sessionIndex].updatedAt = new Date();
 
-  // Sắp xếp lại danh sách theo thời gian cập nhật
-  sessionList.sort((a, b) => {
-    return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
-  });
-
-  // Render lại danh sách
+  // Không sắp xếp lại mà chỉ cập nhật thông tin hiển thị
   renderSessionList(sessionList);
 }
 
@@ -2518,202 +2590,6 @@ function sendAutoReply(sessionId) {
   });
 }
 
-// Hàm lấy dữ liệu thống kê
-function fetchStats(period = 'today') {
-  // Hiển thị loading
-  const statsCards = document.querySelectorAll('.stat-value');
-  statsCards.forEach(card => {
-    card.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  });
-  
-  const chartContainer = document.querySelector('.chart-container');
-  if (chartContainer) {
-    chartContainer.innerHTML = '<div class="loading-chart">Đang tải dữ liệu...</div>';
-  }
-  
-  // Hiển thị loading cho phần góp ý
-  const recentRatingsContainer = document.getElementById('recent-ratings');
-  if (recentRatingsContainer) {
-    recentRatingsContainer.innerHTML = '<div class="loading-chart">Đang tải dữ liệu...</div>';
-  }
-  
-  // Gọi API
-  fetch('/api/support/stats?period=' + period, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getToken()}`
-    }
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-    return response.json();
-  })
-  .then(data => {
-    // Hiển thị dữ liệu lên giao diện
-    displayStats(data);
-    
-    // Vẽ biểu đồ
-    renderStatsChart(data.sessionsByDay);
-    
-    // Hiển thị dữ liệu góp ý đánh giá
-    displayRecentRatings(data.recentRatings || []);
-  })
-  .catch(error => {
-    console.error('Error fetching stats:', error);
-    showNotification('Không thể tải dữ liệu thống kê', 'error');
-    
-    // Hiển thị thông báo lỗi cho biểu đồ
-    const chartContainer = document.querySelector('.chart-container');
-    if (chartContainer) {
-      chartContainer.innerHTML = '<div class="error-message">Không thể tải dữ liệu biểu đồ</div>';
-    }
-    
-    // Hiển thị thông báo lỗi cho phần góp ý
-    const recentRatingsContainer = document.getElementById('recent-ratings');
-    if (recentRatingsContainer) {
-      recentRatingsContainer.innerHTML = '<div class="error-message">Không thể tải dữ liệu đánh giá</div>';
-    }
-  });
-}
-
-// Hiển thị dữ liệu thống kê
-function displayStats(data) {
-  // Cập nhật các giá trị thống kê
-  const statElements = {
-    'total-sessions': data.totalSessions,
-    'completed-sessions': data.completedSessions,
-    'avg-response-time': `${data.avgResponseTime} phút`,
-    'avg-rating': data.avgRating
-  };
-  
-  // Cập nhật từng phần tử
-  Object.keys(statElements).forEach(id => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.textContent = statElements[id];
-    }
-  });
-  
-  // Hiển thị thông tin nhân viên nếu có
-  if (data.staffStats && data.staffStats.length > 0) {
-    const staffStatsContainer = document.getElementById('staff-stats-container');
-    if (staffStatsContainer) {
-      staffStatsContainer.innerHTML = '';
-      
-      // Tạo bảng thống kê nhân viên
-      const staffTable = document.createElement('table');
-      staffTable.className = 'staff-stats-table';
-      
-      // Tạo header
-      const tableHeader = document.createElement('thead');
-      tableHeader.innerHTML = `
-        <tr>
-          <th>Nhân viên</th>
-          <th>Phiên hỗ trợ</th>
-          <th>Hoàn thành</th>
-          <th>Thời gian TB</th>
-          <th>Đánh giá</th>
-        </tr>
-      `;
-      staffTable.appendChild(tableHeader);
-      
-      // Tạo body
-      const tableBody = document.createElement('tbody');
-      data.staffStats.forEach(staff => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${staff.name}</td>
-          <td>${staff.sessions}</td>
-          <td>${staff.completed}</td>
-          <td>${staff.avgResponseTime} phút</td>
-          <td>${staff.rating}/5</td>
-        `;
-        tableBody.appendChild(row);
-      });
-      staffTable.appendChild(tableBody);
-      
-      // Thêm bảng vào container
-      staffStatsContainer.appendChild(staffTable);
-    }
-  }
-}
-
-// Vẽ biểu đồ thống kê
-function renderStatsChart(data) {
-  // Lấy phần tử container
-  const chartContainer = document.querySelector('.chart-container');
-  if (!chartContainer) return;
-  
-  // Xóa nội dung cũ
-  chartContainer.innerHTML = '';
-  
-  // Tạo tiêu đề
-  const chartTitle = document.createElement('h3');
-  chartTitle.textContent = 'Số phiên hỗ trợ theo ngày';
-  chartContainer.appendChild(chartTitle);
-  
-  // Tính toán giá trị lớn nhất
-  const maxValue = Math.max(...data.map(item => item.count), 1);
-  
-  // Tạo canvas cho biểu đồ
-  const chartCanvas = document.createElement('div');
-  chartCanvas.className = 'chart-canvas';
-  
-  // Tạo các thanh biểu đồ
-  data.forEach(item => {
-    const percentage = (item.count / maxValue) * 100;
-    
-    const chartBar = document.createElement('div');
-    chartBar.className = 'chart-bar';
-    
-    chartBar.innerHTML = `
-      <div class="chart-bar-fill" style="height: ${percentage}%"></div>
-      <div class="chart-bar-value">${item.count}</div>
-      <div class="chart-bar-label">${item.date}</div>
-    `;
-    
-    chartCanvas.appendChild(chartBar);
-  });
-  
-  chartContainer.appendChild(chartCanvas);
-}
-
-// Thiết lập phần thống kê
-function setupStats() {
-  // Lấy bộ lọc thống kê
-  const statsFilter = document.getElementById('stats-period-filter');
-  if (statsFilter) {
-    // Thêm bộ lọc thời gian
-    statsFilter.addEventListener('change', () => {
-      fetchStats(statsFilter.value);
-    });
-  }
-  
-  // Thêm ID cho các phần tử thống kê
-  const statValueElements = document.querySelectorAll('#stats-section .stat-value');
-  const statTitles = ['total-sessions', 'completed-sessions', 'avg-response-time', 'avg-rating'];
-  
-  statValueElements.forEach((element, index) => {
-    if (index < statTitles.length) {
-      element.id = statTitles[index];
-    }
-  });
-  
-  // Thêm container cho thống kê nhân viên
-  const statsCharts = document.querySelector('.stats-charts');
-  if (statsCharts) {
-    const staffStatsContainer = document.createElement('div');
-    staffStatsContainer.id = 'staff-stats-container';
-    staffStatsContainer.className = 'staff-stats-container';
-    statsCharts.appendChild(staffStatsContainer);
-  }
-  
-  // Tải dữ liệu thống kê ban đầu
-  fetchStats('today');
-}
 
 // Hàm khởi tạo
 function init() {
@@ -3275,6 +3151,12 @@ function verifyVoucher(code) {
 function initVoucherFunctions() {
   console.log("Initializing voucher functions");
   
+  // Tải danh sách voucher ngay lập tức
+  fetchVouchers();
+  
+  // Thiết lập cập nhật tự động mỗi 30 giây
+  setInterval(fetchVouchers, 30000);
+  
   // Lấy form verify voucher
   const verifyForm = document.getElementById('verify-voucher-form');
   if (verifyForm) {
@@ -3289,11 +3171,25 @@ function initVoucherFunctions() {
       }
     });
   } else {
-    console.log("Verify form not found!");
+    console.error("Verify form not found");
   }
   
-  // Tải danh sách voucher
-  fetchVouchers();
+  // Thiết lập các event listener cho nút đánh dấu đã sử dụng
+  const useVoucherBtn = document.getElementById('use-voucher');
+  if (useVoucherBtn) {
+    useVoucherBtn.addEventListener('click', function() {
+      const code = this.getAttribute('data-code');
+      if (code) {
+        markVoucherAsUsed(code);
+      }
+    });
+  }
+  
+  // Thiết lập nút làm mới danh sách voucher
+  const refreshBtn = document.getElementById('refresh-vouchers');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', fetchVouchers);
+  }
 }
 
 // Tải danh sách vouchers từ server
@@ -3314,16 +3210,18 @@ function fetchVouchers() {
     </div>
   `;
   
+  // Lấy token, nếu không có token thì thử gọi API không cần xác thực
+  const token = getToken();
+  const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+  
   // Gọi API lấy danh sách voucher
-  fetch('/api/vouchers/list', {
+  fetch('/api/vouchers', {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${getToken()}`
-    }
+    headers: headers
   })
   .then(response => {
     if (!response.ok) {
-      throw new Error('Không thể tải danh sách voucher');
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
     return response.json();
   })
@@ -3333,7 +3231,8 @@ function fetchVouchers() {
     if (!vouchers || vouchers.length === 0) {
       vouchersListContainer.innerHTML = `
         <div class="no-data">
-          <p>Chưa có voucher nào được tạo</p>
+          <p>Chưa có voucher nào được tạo hoặc bạn không có quyền xem</p>
+          <button class="btn btn-primary" onclick="fetchVouchers()">Thử lại</button>
         </div>
       `;
       return;
@@ -3341,10 +3240,31 @@ function fetchVouchers() {
     
     // Sắp xếp vouchers theo thời gian tạo mới nhất lên đầu
     vouchers.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
       return dateB.getTime() - dateA.getTime(); // Sắp xếp giảm dần (mới nhất lên đầu)
     });
+    
+    // Debug: Hiển thị voucher đầu tiên và metadata
+    if (vouchers.length > 0) {
+      const firstVoucher = vouchers[0];
+      console.log('First voucher:', firstVoucher);
+      console.log('Voucher metadata raw:', firstVoucher.metadata);
+      
+      try {
+        if (firstVoucher.metadata) {
+          const parsedMetadata = typeof firstVoucher.metadata === 'string' 
+            ? JSON.parse(firstVoucher.metadata) 
+            : firstVoucher.metadata;
+          console.log('Parsed metadata:', parsedMetadata);
+          console.log('Quiz score:', parsedMetadata.quizScore);
+        } else {
+          console.log('No metadata found in voucher');
+        }
+      } catch (e) {
+        console.error('Error parsing metadata:', e);
+      }
+    }
     
     // Tạo bảng danh sách voucher
     let tableHTML = `
@@ -3365,27 +3285,50 @@ function fetchVouchers() {
     
     vouchers.forEach(voucher => {
       // Định dạng ngày tạo
-      const createdDate = voucher.createdAt ? new Date(voucher.createdAt) : null;
+      const createdDate = voucher.created_at ? new Date(voucher.created_at) : null;
       const formattedDate = createdDate ? 
-        `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${createdDate.getMinutes()}` : 
+        `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${String(createdDate.getMinutes()).padStart(2, '0')}` : 
         'N/A';
       
       // Định dạng trạng thái
-      const statusClass = voucher.isUsed ? 'text-danger' : 'text-success';
-      const statusText = voucher.isUsed ? 'Đã sử dụng' : 'Khả dụng';
+      const statusClass = voucher.is_used ? 'text-danger' : 'text-success';
+      const statusText = voucher.is_used ? 'Đã sử dụng' : 'Khả dụng';
       
       // Định dạng điểm quiz
-      const quizScore = voucher.quizScore != null ? voucher.quizScore : 'N/A';
+      let quizScore = 'N/A';
+      try {
+        // Trích xuất điểm quiz từ metadata nếu có
+        if (voucher.metadata) {
+          let metadata;
+          // Nếu metadata là chuỗi, thử parse thành JSON
+          if (typeof voucher.metadata === 'string') {
+            try {
+              metadata = JSON.parse(voucher.metadata);
+            } catch (parseError) {
+              console.error('Error parsing metadata as JSON string:', parseError);
+            }
+          } else {
+            metadata = voucher.metadata;
+          }
+          
+          // Nếu parse thành công và có quizScore, hiển thị
+          if (metadata && metadata.quizScore !== undefined) {
+            quizScore = metadata.quizScore;
+          }
+        }
+      } catch (e) {
+        console.error('Lỗi khi parse metadata:', e);
+      }
       
       // Tạo button hành động
-      const actionButton = voucher.isUsed 
+      const actionButton = voucher.is_used 
         ? '<span class="badge bg-secondary">Đã sử dụng</span>' 
         : `<button class="btn-mark-used" data-code="${voucher.code}">Đánh dấu đã dùng</button>`;
       
       tableHTML += `
-        <tr class="${voucher.isUsed ? 'used-voucher' : ''}">
+        <tr class="${voucher.is_used ? 'used-voucher' : ''}">
           <td><code>${voucher.code}</code></td>
-          <td>${voucher.discount || 0}%</td>
+          <td>${voucher.discount_percent || 0}%</td>
           <td>${formattedDate}</td>
           <td>${quizScore}</td>
           <td class="${statusClass}">${statusText}</td>
@@ -3450,7 +3393,7 @@ function checkVoucherCode(code) {
   }
   
   // Gọi API kiểm tra voucher
-  fetch(`/api/vouchers/check/${code}`, {
+  fetch(`/api/vouchers/${code}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${getToken()}`
@@ -3475,6 +3418,7 @@ function checkVoucherCode(code) {
 
 // Cập nhật kết quả kiểm tra voucher
 function updateVoucherResult(voucher, isValid) {
+  console.log('Updating voucher result:', voucher);
   const resultElement = document.getElementById('voucher-result');
   if (!resultElement) return;
   
@@ -3492,26 +3436,49 @@ function updateVoucherResult(voucher, isValid) {
     statusText.textContent = 'Voucher hợp lệ';
     
     // Hiển thị thông tin voucher
-    discountElement.textContent = voucher.discount || 0;
+    discountElement.textContent = voucher.discount_percent || 0;
     
     // Định dạng ngày tạo
-    if (voucher.createdAt) {
-      const createdDate = new Date(voucher.createdAt);
-      createdElement.textContent = `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${createdDate.getMinutes()}`;
+    if (voucher.created_at) {
+      const createdDate = new Date(voucher.created_at);
+      createdElement.textContent = `${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()} ${createdDate.getHours()}:${String(createdDate.getMinutes()).padStart(2, '0')}`;
     } else {
       createdElement.textContent = 'N/A';
     }
     
     // Hiển thị trạng thái sử dụng
-    usedElement.textContent = voucher.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng';
-    usedElement.className = voucher.isUsed ? 'text-danger' : 'text-success';
+    usedElement.textContent = voucher.is_used ? 'Đã sử dụng' : 'Chưa sử dụng';
+    usedElement.className = voucher.is_used ? 'text-danger' : 'text-success';
     
-    // Hiển thị điểm quiz
-    scoreElement.textContent = voucher.quizScore != null ? voucher.quizScore : 'N/A';
+    // Hiển thị điểm quiz từ metadata
+    let quizScore = 'N/A';
+    try {
+      if (voucher.metadata) {
+        let metadata;
+        // Nếu metadata là chuỗi, thử parse thành JSON
+        if (typeof voucher.metadata === 'string') {
+          try {
+            metadata = JSON.parse(voucher.metadata);
+          } catch (parseError) {
+            console.error('Error parsing metadata as JSON string:', parseError);
+          }
+        } else {
+          metadata = voucher.metadata;
+        }
+        
+        // Nếu parse thành công và có quizScore, hiển thị
+        if (metadata && metadata.quizScore !== undefined) {
+          quizScore = metadata.quizScore;
+        }
+      }
+    } catch (e) {
+      console.error('Error processing metadata:', e);
+    }
+    scoreElement.textContent = quizScore;
     
     // Hiển thị hoặc ẩn nút sử dụng voucher tùy theo trạng thái
     if (useVoucherBtn) {
-      if (voucher.isUsed) {
+      if (voucher.is_used) {
         useVoucherBtn.style.display = 'none';
       } else {
         useVoucherBtn.style.display = 'block';
@@ -3538,7 +3505,7 @@ function updateVoucherResult(voucher, isValid) {
 
 // Đánh dấu voucher đã sử dụng
 function markVoucherAsUsed(code) {
-  fetch(`/api/vouchers/use/${code}`, {
+  fetch(`/api/vouchers/${code}/use`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${getToken()}`,
@@ -3547,7 +3514,7 @@ function markVoucherAsUsed(code) {
   })
   .then(response => {
     if (!response.ok) {
-      throw new Error('Không thể đánh dấu voucher');
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
     return response.json();
   })
@@ -3571,7 +3538,7 @@ function markVoucherAsUsed(code) {
   })
   .catch(error => {
     console.error('Lỗi khi đánh dấu voucher:', error);
-    showNotification('Không thể đánh dấu voucher đã sử dụng', 'error');
+    showNotification('Không thể đánh dấu voucher đã sử dụng: ' + error.message, 'error');
   });
 }
 
@@ -3798,4 +3765,58 @@ function syncTemplates() {
   setupQuickResponses();
   
   console.log("Đã đồng bộ mẫu câu sang câu trả lời nhanh");
+}
+
+// Xóa phiên chat
+function deleteSession() {
+  if (!currentSessionId) return;
+  
+  const sessionIdToDelete = currentSessionId; // Lưu ID hiện tại vào biến tạm
+
+  if (!confirm('Bạn có chắc chắn muốn xóa phiên hỗ trợ này? Tất cả tin nhắn sẽ bị xóa và không thể khôi phục.')) {
+    return;
+  }
+
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+  // Hiển thị thông báo đang xóa
+  showNotification('Đang xóa phiên chat...', 'info');
+
+  // Đóng phiên hiện tại trước
+  closeChatSession();
+  
+  // Xóa khỏi danh sách UI ngay lập tức để phản hồi nhanh với người dùng
+  sessionList = sessionList.filter(session => session.id !== sessionIdToDelete);
+  renderSessionList(sessionList);
+
+  fetch(`${API_BASE_URL}/support/delete-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      sessionId: sessionIdToDelete
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Session deleted successfully:', data);
+    showNotification('Đã xóa phiên chat thành công', 'success');
+    
+    // Cập nhật lại danh sách từ server
+    setTimeout(fetchSupportSessions, 300);
+  })
+  .catch(error => {
+    console.error('Error deleting session:', error);
+    showNotification('Không thể xóa phiên chat: ' + error.message, 'error');
+    
+    // Nếu lỗi, tải lại danh sách phiên từ server để đảm bảo dữ liệu đồng bộ
+    fetchSupportSessions();
+  });
 }

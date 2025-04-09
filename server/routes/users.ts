@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { storage } from "../storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { UpdateUser } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "very-secret-key-for-jwt-tokens";
 
@@ -41,7 +42,7 @@ export function createUserRouter() {
   router.get('/me', authMiddleware, async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.id;
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserById(userId);
       
       if (!user) {
         return res.status(404).json({ message: 'Người dùng không tồn tại' });
@@ -79,10 +80,14 @@ export function createUserRouter() {
       }
       
       // Cập nhật thông tin người dùng
-      const updatedUser = await storage.updateUser(userId, { name, email });
+      const updatedUser = await storage.updateUser(userId, { name, email } as UpdateUser);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Người dùng không tồn tại' });
+      }
       
       // Loại bỏ mật khẩu trước khi trả về
-      const { password, ...userWithoutPassword } = updatedUser;
+      const { password: _, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Error updating user:', error);
@@ -109,7 +114,7 @@ export function createUserRouter() {
       }
       
       // Lấy thông tin người dùng
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserById(userId);
       
       if (!user) {
         return res.status(404).json({ message: 'Người dùng không tồn tại' });

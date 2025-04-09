@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     });
+    
+    // Thiết lập nút thêm endpoint khi trang được tải
+    setupEndpointAddButton();
   }
 
   // Chức năng đăng xuất
@@ -433,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ${getStatusText(inquiry.status)}
               </span>
             </td>
-            <td>${formatDate(inquiry.createdAt)}</td>
+            <td>${formatDate(inquiry.createdAt || inquiry.created_at)}</td>
             <td class="action-buttons">
               <button class="view-btn btn-primary" data-id="${inquiry.id}"><i class="fas fa-eye"></i> Xem</button>
               <button class="delete-btn btn-danger" data-id="${inquiry.id}"><i class="fas fa-trash-alt"></i> Xóa</button>
@@ -472,8 +475,16 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/admin/endpoints', {
       headers: authHeader
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách endpoints. Mã lỗi: ' + response.status);
+      }
+      return response.json();
+    })
     .then(endpoints => {
+      // Ghi log số lượng endpoints
+      console.log(`Đã tải ${endpoints.length} endpoints từ server`);
+      
       endpointsTable.innerHTML = '';
       
       if (endpoints.length === 0) {
@@ -525,13 +536,23 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Error loading endpoints:', error);
-      endpointsTable.innerHTML = '<tr><td colspan="8" class="no-data">Lỗi khi tải dữ liệu</td></tr>';
+      endpointsTable.innerHTML = `<tr><td colspan="8" class="no-data">Lỗi khi tải dữ liệu: ${error.message}</td></tr>`;
     });
-    
-    // Setup add button handler
-    document.getElementById('add-endpoint-btn').addEventListener('click', function() {
-      openEndpointModal('add');
-    });
+  }
+
+  // Thiết lập nút thêm endpoint riêng biệt (chỉ gọi một lần khi trang tải)
+  function setupEndpointAddButton() {
+    const addButton = document.getElementById('add-endpoint-btn');
+    if (addButton) {
+      // Xóa tất cả event listeners cũ
+      const newButton = addButton.cloneNode(true);
+      addButton.parentNode.replaceChild(newButton, addButton);
+      
+      // Thêm event listener mới
+      newButton.addEventListener('click', function() {
+        openEndpointModal('add');
+      });
+    }
   }
 
   // Thiết lập modal xử lý inquiry
@@ -823,16 +844,68 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function formatDate(dateString) {
-    if (!dateString) return 'N/A';
+    // Nếu không có ngày, sử dụng thời gian hiện tại
+    if (!dateString) {
+      dateString = new Date().toISOString();
+    }
     
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      
+      // Kiểm tra xem ngày có hợp lệ không
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return new Date().toLocaleString('vi-VN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return new Date().toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
+  function formatDateTime(dateString) {
+    // Sử dụng formatDate nhưng thêm vào để tránh lỗi
+    if (!dateString) {
+      return 'N/A';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Ngày không hợp lệ';
+      }
+      
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting datetime:', error);
+      return 'Lỗi định dạng ngày';
+    }
   }
 
   // Tải danh sách mẫu câu chatbot
@@ -1047,7 +1120,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Thiết lập modal pattern
   function setupPatternModal() {
-    document.getElementById('save-pattern-btn').addEventListener('click', savePattern);
+    // Đảm bảo modal đã được tạo
+    const patternModal = document.getElementById('pattern-modal');
+    if (!patternModal || patternModal.querySelector('.modal-content') === null) {
+      console.error('Pattern modal not found or not properly structured');
+      return;
+    }
+
+    // Thêm event listener cho nút lưu
+    const saveButton = document.getElementById('save-pattern-btn');
+    if (saveButton) {
+      saveButton.addEventListener('click', savePattern);
+    }
+    
+    // Đồng bộ token giữa auth_token và token
+    document.getElementById('add-pattern-btn').addEventListener('click', function() {
+      // Đảm bảo token được đồng bộ
+      if (localStorage.getItem('auth_token') && !localStorage.getItem('token')) {
+        localStorage.setItem('token', localStorage.getItem('auth_token'));
+      } else if (localStorage.getItem('token') && !localStorage.getItem('auth_token')) {
+        localStorage.setItem('auth_token', localStorage.getItem('token'));
+      }
+      
+      openPatternModal('add');
+    });
+    
+    // Thêm event listener để đóng modal
+    const closeButton = patternModal.querySelector('.close');
+    if (closeButton) {
+      closeButton.addEventListener('click', function() {
+        patternModal.style.display = 'none';
+      });
+    }
+    
+    // Đóng modal khi click bên ngoài
+    window.addEventListener('click', function(event) {
+      if (event.target === patternModal) {
+        patternModal.style.display = 'none';
+      }
+    });
   }
 
   function handleSessionClick(session) {
@@ -1329,9 +1440,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Hàm kiểm tra và làm mới token
   function refreshTokenIfNeeded() {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    // Kiểm tra và đồng bộ token
+    let token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    if (!token) {
+    // Đảm bảo cả hai vị trí lưu trữ đều có token giống nhau
+    if (token) {
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('token', token);
+    } else {
+      // Không có token, chuyển hướng đến trang đăng nhập
       window.location.href = '/login.html';
       return;
     }
@@ -1349,9 +1466,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const expiryTime = payload.exp * 1000; // Convert to milliseconds
       const currentTime = Date.now();
       
-      // Nếu token gần hết hạn (còn dưới 5 phút)
-      if (expiryTime && (expiryTime - currentTime < 5 * 60 * 1000)) {
-        console.log('Token is about to expire, refreshing...');
+      // Debug thông tin token
+      console.log('Token info:', {
+        expiresAt: new Date(expiryTime),
+        timeRemaining: Math.floor((expiryTime - currentTime) / 1000 / 60) + ' phút',
+        isExpiring: (expiryTime - currentTime < 5 * 60 * 1000)
+      });
+      
+      // Nếu token gần hết hạn (còn dưới 5 phút) hoặc đã hết hạn
+      if (expiryTime && (expiryTime - currentTime < 5 * 60 * 1000 || expiryTime <= currentTime)) {
+        console.log('Token is about to expire or already expired, refreshing...');
         // Gọi API làm mới token
         fetch('/api/auth/refresh', {
           method: 'POST',
@@ -1367,12 +1491,21 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
           if (data.token) {
-            localStorage.setItem('auth_token', data.token);
             console.log('Token refreshed successfully');
+            // Lưu token mới vào cả hai vị trí
+            localStorage.setItem('auth_token', data.token);
+            localStorage.setItem('token', data.token);
           }
         })
         .catch(error => {
           console.error('Error refreshing token:', error);
+          if (expiryTime <= currentTime) {
+            // Token đã hết hạn, chuyển hướng đến trang đăng nhập
+            console.log('Token expired, redirecting to login');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+          }
         });
       }
     } catch (error) {

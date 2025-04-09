@@ -30,6 +30,14 @@ class Chatbot {
       }
       
       this.isInitialized = true;
+      
+      // Thêm listener để xóa session khi đăng nhập/đăng xuất
+      window.addEventListener('user-auth-change', () => {
+        console.log('User authentication changed, clearing chat session');
+        localStorage.removeItem('chatbot_session_id');
+        this.sessionId = null;
+        this.initializeSession();
+      });
     } catch (error) {
       console.error('Error initializing chatbot:', error);
       this.addSystemMessage('Không thể khởi tạo chat. Vui lòng tải lại trang.');
