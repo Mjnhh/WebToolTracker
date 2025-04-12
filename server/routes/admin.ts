@@ -4,7 +4,7 @@ import { storage } from "../storage";
 import { insertEndpointSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "very-secret-key-for-jwt-tokens";
@@ -29,8 +29,19 @@ function isAdmin(req: Request, res: Response, next: any) {
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    // Log user information for debugging, but allow access regardless of role
-    console.log('Admin API access attempt by:', {
+    // Kiểm tra role admin
+    if (decoded.role !== 'admin') {
+      console.error('Admin API access attempt by non-admin user:', {
+        userId: decoded.id,
+        username: decoded.username,
+        role: decoded.role,
+        name: decoded.name
+      });
+      return res.status(403).json({ message: 'Không có quyền truy cập - Yêu cầu quyền admin' });
+    }
+    
+    // Log user information for debugging
+    console.log('Admin API access by:', {
       userId: decoded.id,
       username: decoded.username,
       role: decoded.role,
@@ -114,6 +125,36 @@ router.patch("/users/:id", isAdmin, async (req, res, next) => {
     // Loại bỏ trường password trước khi gửi về client
     const { password: _, ...userWithoutPassword } = updatedUser;
     res.json(userWithoutPassword);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Admin - Xóa người dùng
+router.delete("/users/:id", isAdmin, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Kiểm tra xem user có tồn tại không
+    const existingUser = await storage.getUser(id);
+    if (!existingUser) {
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
+    }
+    
+    // Không cho phép xóa tài khoản admin đang đăng nhập
+    const currentUser = (req as any).user;
+    if (currentUser && currentUser.id === id && currentUser.role === 'admin') {
+      return res.status(403).json({ message: "Không thể xóa tài khoản admin đang đăng nhập" });
+    }
+    
+    // Xóa user
+    const deleted = await storage.deleteUser(id);
+    
+    if (!deleted) {
+      return res.status(500).json({ message: "Có lỗi khi xóa người dùng" });
+    }
+    
+    res.status(204).end();
   } catch (error) {
     next(error);
   }

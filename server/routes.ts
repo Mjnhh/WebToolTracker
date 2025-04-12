@@ -1,5 +1,5 @@
 import express from "express";
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import chatRouter from "./routes/chat";
 import supportRouter from "./routes/support";
@@ -14,10 +14,69 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createUserRouter } from "./routes/users";
 import voucherRouter from './routes/vouchers';
+import jwt from "jsonwebtoken";
 
 // Lấy __dirname trong ES modules (vì __dirname không tồn tại trong ES modules)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Middleware kiểm tra quyền admin
+function checkAdminAccess(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      console.error('Admin page access attempt: No token found');
+      return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+    }
+    
+    const JWT_SECRET = process.env.JWT_SECRET || "very-secret-key-for-jwt-tokens";
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    if (decoded.role !== 'admin') {
+      console.error('Admin page access attempt by non-admin user:', {
+        userId: decoded.id,
+        username: decoded.username,
+        role: decoded.role
+      });
+      return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Admin page access error:', error);
+    return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+  }
+}
+
+// Middleware kiểm tra quyền staff hoặc admin
+function checkStaffAccess(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      console.error('Staff page access attempt: No token found');
+      return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+    }
+    
+    const JWT_SECRET = process.env.JWT_SECRET || "very-secret-key-for-jwt-tokens";
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    if (decoded.role !== 'admin' && decoded.role !== 'staff') {
+      console.error('Staff page access attempt by unauthorized user:', {
+        userId: decoded.id,
+        username: decoded.username,
+        role: decoded.role
+      });
+      return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Staff page access error:', error);
+    return res.status(404).sendFile(path.join(process.cwd(), 'public/404.html'));
+  }
+}
 
 export async function registerRoutes(app: Express) {
   const server = createServer(app);
@@ -55,12 +114,23 @@ export async function registerRoutes(app: Express) {
   console.log("Registered voucher API routes at /api/vouchers");
   
   // Route cho trang admin đặt trước static middleware
-  app.get('/admin', (req, res) => {
+  app.get('/admin', checkAdminAccess, (req, res) => {
     console.log("Serving admin page...");
     // Đơn giản hóa bằng cách sử dụng đường dẫn tuyệt đối
     res.sendFile(path.join(process.cwd(), 'public/admin-control-panel.html'));
   });
   console.log("Registered admin page route at /admin");
+  
+  // Route cho trang staff (hỗ trợ khách hàng)
+  app.get('/staff', checkStaffAccess, (req, res) => {
+    console.log("Serving staff page...");
+    res.sendFile(path.join(process.cwd(), 'public/staff/index.html'));
+  });
+  console.log("Registered staff page route at /staff");
+  
+  // Bảo vệ tất cả các file trong thư mục staff
+  app.use('/staff', checkStaffAccess, express.static(path.join(process.cwd(), 'public/staff')));
+  console.log("Registered protected staff files routes");
   
   // Route cho trang hồ sơ cá nhân
   app.get('/profile', (req, res) => {

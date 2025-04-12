@@ -45,9 +45,6 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Kết nối socket nếu cần
       initializeSocket();
-      
-      // Tải hoạt động gần đây
-      loadRecentActivities();
     })
     .catch(error => {
       console.error('Lỗi xác thực:', error);
@@ -217,6 +214,10 @@ document.addEventListener('DOMContentLoaded', function() {
    * Đổi mật khẩu
    */
   function changePassword() {
+    // Hiển thị thông báo đang xử lý
+    document.getElementById('change-password-btn').textContent = 'Đang xử lý...';
+    document.getElementById('change-password-btn').disabled = true;
+    
     const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
     const userId = currentUser.id;
     
@@ -224,9 +225,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const newPassword = document.getElementById('new-password').value;
     const confirmPassword = document.getElementById('confirm-password').value;
     
+    // Kiểm tra mật khẩu mới 
+    if (!newPassword || newPassword.length < 6) {
+      alert('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      resetChangePasswordButton();
+      return;
+    }
+    
     // Kiểm tra mật khẩu mới và xác nhận mật khẩu
     if (newPassword !== confirmPassword) {
       alert('Mật khẩu mới và xác nhận mật khẩu không khớp.');
+      resetChangePasswordButton();
       return;
     }
     
@@ -234,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
       currentPassword: currentPassword,
       newPassword: newPassword
     };
+
+    console.log(`Đang gửi yêu cầu đổi mật khẩu đến: /api/users/${userId}/change-password`);
     
     fetch(`/api/users/${userId}/change-password`, {
       method: 'POST',
@@ -244,11 +255,17 @@ document.addEventListener('DOMContentLoaded', function() {
       body: JSON.stringify(passwordData)
     })
     .then(response => {
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Mật khẩu hiện tại không đúng');
-        }
-        throw new Error('Đổi mật khẩu thất bại');
+      console.log('Nhận phản hồi:', response.status);
+      if (response.status === 401) {
+        throw new Error('Mật khẩu hiện tại không đúng');
+      } else if (response.status === 403) {
+        throw new Error('Không có quyền đổi mật khẩu');
+      } else if (response.status === 400) {
+        return response.json().then(data => {
+          throw new Error(data.message || 'Dữ liệu không hợp lệ');
+        });
+      } else if (!response.ok) {
+        throw new Error('Có lỗi khi đổi mật khẩu (Mã: ' + response.status + ')');
       }
       return response.json();
     })
@@ -258,11 +275,18 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Hiển thị thông báo
       alert('Đổi mật khẩu thành công!');
+      resetChangePasswordButton();
     })
     .catch(error => {
       console.error('Lỗi khi đổi mật khẩu:', error);
-      alert(error.message || 'Có lỗi xảy ra khi đổi mật khẩu.');
+      alert('Lỗi: ' + (error.message || 'Có lỗi không xác định khi đổi mật khẩu.'));
+      resetChangePasswordButton();
     });
+    
+    function resetChangePasswordButton() {
+      document.getElementById('change-password-btn').textContent = 'Cập nhật mật khẩu';
+      document.getElementById('change-password-btn').disabled = false;
+    }
   }
 
   /**
@@ -324,87 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   /**
-   * Tải hoạt động gần đây
-   */
-  function loadRecentActivities() {
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-    const userId = currentUser.id;
-    
-    // Hiển thị trạng thái tải
-    document.getElementById('activity-list').innerHTML = `
-      <div class="timeline-item">
-        <div class="timeline-icon"><i class="fas fa-spinner fa-spin"></i></div>
-        <div class="timeline-content">
-          <p>Đang tải hoạt động...</p>
-        </div>
-        <div class="timeline-time">-</div>
-      </div>
-    `;
-    
-    // Trong phiên bản này, chúng ta sẽ hiển thị một số hoạt động mẫu
-    // do API chưa được triển khai
-    setTimeout(() => {
-      const activities = [
-        {
-          type: 'login',
-          message: 'Đăng nhập vào hệ thống',
-          timestamp: new Date()
-        },
-        {
-          type: 'profile',
-          message: 'Cập nhật thông tin cá nhân',
-          timestamp: new Date(Date.now() - 86400000) // 1 ngày trước
-        },
-        {
-          type: 'password',
-          message: 'Thay đổi mật khẩu',
-          timestamp: new Date(Date.now() - 3 * 86400000) // 3 ngày trước
-        }
-      ];
-      
-      displayActivities(activities);
-    }, 1000);
-  }
-
-  /**
-   * Hiển thị hoạt động
-   */
-  function displayActivities(activities) {
-    const activityList = document.getElementById('activity-list');
-    activityList.innerHTML = '';
-    
-    if (activities.length === 0) {
-      activityList.innerHTML = `
-        <div class="timeline-item">
-          <div class="timeline-icon"><i class="fas fa-info-circle"></i></div>
-          <div class="timeline-content">
-            <p>Không có hoạt động nào gần đây.</p>
-          </div>
-          <div class="timeline-time">-</div>
-        </div>
-      `;
-      return;
-    }
-    
-    activities.forEach(activity => {
-      const icon = getActivityIcon(activity.type);
-      const timeAgo = formatTimeAgo(activity.timestamp);
-      
-      const activityItem = document.createElement('div');
-      activityItem.className = 'timeline-item';
-      activityItem.innerHTML = `
-        <div class="timeline-icon"><i class="${icon}"></i></div>
-        <div class="timeline-content">
-          <p>${activity.message}</p>
-        </div>
-        <div class="timeline-time">${timeAgo}</div>
-      `;
-      
-      activityList.appendChild(activityItem);
-    });
-  }
-
-  /**
    * Khởi tạo kết nối socket
    */
   function initializeSocket() {
@@ -447,63 +390,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  /**
+   * Format ngày tháng (vd: 01/01/2023)
+   */
   function formatDate(date) {
     if (!date) return 'N/A';
     
-    return date.toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function formatTimeAgo(date) {
-    if (!date) return 'N/A';
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
     
-    const now = new Date();
-    const diff = now - new Date(date);
-    
-    // Đổi thành số giây
-    const seconds = Math.floor(diff / 1000);
-    
-    if (seconds < 60) {
-      return 'Vừa xong';
-    }
-    
-    // Đổi thành số phút
-    const minutes = Math.floor(seconds / 60);
-    
-    if (minutes < 60) {
-      return `${minutes} phút trước`;
-    }
-    
-    // Đổi thành số giờ
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours < 24) {
-      return `${hours} giờ trước`;
-    }
-    
-    // Đổi thành số ngày
-    const days = Math.floor(hours / 24);
-    
-    if (days < 30) {
-      return `${days} ngày trước`;
-    }
-    
-    // Nếu quá lâu thì hiển thị ngày tháng
-    return formatDate(date);
-  }
-
-  function getActivityIcon(type) {
-    switch (type) {
-      case 'login': return 'fas fa-sign-in-alt';
-      case 'logout': return 'fas fa-sign-out-alt';
-      case 'profile': return 'fas fa-user-edit';
-      case 'password': return 'fas fa-key';
-      default: return 'fas fa-info-circle';
-    }
+    return `${day}/${month}/${year}`;
   }
 }); 

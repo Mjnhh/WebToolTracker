@@ -76,6 +76,18 @@ CREATE TABLE IF NOT EXISTS chatbot_patterns (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Chat ratings table
+CREATE TABLE IF NOT EXISTS chat_ratings (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL REFERENCES chat_sessions(id),
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    feedback TEXT,
+    staff_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB,
+    CONSTRAINT valid_rating CHECK (rating IN (1, 2, 3, 4, 5))
+);
+
 -- Session storage table for connect-pg-simple
 CREATE TABLE IF NOT EXISTS "sessions" (
   "sid" varchar NOT NULL COLLATE "default" PRIMARY KEY,

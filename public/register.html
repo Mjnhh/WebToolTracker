@@ -14,6 +14,46 @@
       display: none;
       font-size: 14px;
     }
+    .password-requirements {
+      font-size: 10px;
+      color: #666;
+      margin-top: 3px;
+      margin-bottom: 5px;
+      padding-left: 5px;
+    }
+    .password-requirements p {
+      margin: 0;
+      font-weight: bold;
+    }
+    .password-requirements ul {
+      margin: 2px 0 0 0;
+      padding-left: 12px;
+      column-count: 2;
+      column-gap: 5px;
+    }
+    .password-requirements li {
+      margin: 1px 0;
+      list-style-type: none;
+      position: relative;
+      padding-left: 12px;
+    }
+    .password-requirements li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+    }
+    .requirement-met {
+      color: #28a745;
+    }
+    .requirement-unmet {
+      color: #dc3545;
+    }
+    .input-group {
+      margin-bottom: 12px;
+    }
+    #register-btn {
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -37,12 +77,22 @@
           </div>
           <div class="input-group">
             <input type="password" id="password" name="password" placeholder="Mật khẩu" required>
+            <div class="password-requirements">
+              <p>Mật khẩu phải có:</p>
+              <ul>
+                <li id="length-requirement" class="requirement-unmet">Ít nhất 8 ký tự</li>
+                <li id="uppercase-requirement" class="requirement-unmet">Ít nhất một chữ hoa (A-Z)</li>
+                <li id="lowercase-requirement" class="requirement-unmet">Ít nhất một chữ thường (a-z)</li>
+                <li id="number-requirement" class="requirement-unmet">Ít nhất một chữ số (0-9)</li>
+                <li id="special-requirement" class="requirement-unmet">Ít nhất một ký tự đặc biệt (!@#$...)</li>
+              </ul>
+            </div>
           </div>
           <div id="register-error" class="error-message">
             <i class="fas fa-exclamation-circle"></i> 
             <span>Lỗi đăng ký</span>
           </div>
-          <button type="submit">Đăng Ký</button>
+          <button type="submit" id="register-btn">Đăng Ký</button>
       </form>
       <p>Đã có tài khoản? <a href="login.html">Đăng nhập</a></p>
     </div>
@@ -50,5 +100,117 @@
   
   <!-- Load auth.js script -->
   <script src="auth.js"></script>
+  <script>
+    // Kiểm tra mật khẩu theo thời gian thực
+    document.getElementById('password').addEventListener('input', function(e) {
+      const password = e.target.value;
+      
+      // Kiểm tra độ dài
+      if (password.length >= 8) {
+        document.getElementById('length-requirement').className = 'requirement-met';
+      } else {
+        document.getElementById('length-requirement').className = 'requirement-unmet';
+      }
+      
+      // Kiểm tra chữ hoa
+      if (/[A-Z]/.test(password)) {
+        document.getElementById('uppercase-requirement').className = 'requirement-met';
+      } else {
+        document.getElementById('uppercase-requirement').className = 'requirement-unmet';
+      }
+      
+      // Kiểm tra chữ thường
+      if (/[a-z]/.test(password)) {
+        document.getElementById('lowercase-requirement').className = 'requirement-met';
+      } else {
+        document.getElementById('lowercase-requirement').className = 'requirement-unmet';
+      }
+      
+      // Kiểm tra chữ số
+      if (/[0-9]/.test(password)) {
+        document.getElementById('number-requirement').className = 'requirement-met';
+      } else {
+        document.getElementById('number-requirement').className = 'requirement-unmet';
+      }
+      
+      // Kiểm tra ký tự đặc biệt
+      if (/[^A-Za-z0-9]/.test(password)) {
+        document.getElementById('special-requirement').className = 'requirement-met';
+      } else {
+        document.getElementById('special-requirement').className = 'requirement-unmet';
+      }
+    });
+    
+    // Kiểm tra mật khẩu trước khi gửi form
+    document.getElementById('register-form').addEventListener('submit', function(e) {
+      // Ngăn chặn form gửi đi trước
+      e.preventDefault();
+      
+      const password = document.getElementById('password').value;
+      const errorElement = document.getElementById('register-error');
+      
+      // Biến kiểm tra mật khẩu hợp lệ
+      let isValid = true;
+      
+      // Kiểm tra các yêu cầu mật khẩu
+      if (password.length < 8) {
+        isValid = false;
+        errorElement.style.display = 'block';
+        errorElement.querySelector('span').textContent = 'Mật khẩu phải có ít nhất 8 ký tự';
+      } else if (!/[A-Z]/.test(password)) {
+        isValid = false;
+        errorElement.style.display = 'block';
+        errorElement.querySelector('span').textContent = 'Mật khẩu phải chứa ít nhất một chữ hoa';
+      } else if (!/[a-z]/.test(password)) {
+        isValid = false;
+        errorElement.style.display = 'block';
+        errorElement.querySelector('span').textContent = 'Mật khẩu phải chứa ít nhất một chữ thường';
+      } else if (!/[0-9]/.test(password)) {
+        isValid = false;
+        errorElement.style.display = 'block';
+        errorElement.querySelector('span').textContent = 'Mật khẩu phải chứa ít nhất một chữ số';
+      } else if (!/[^A-Za-z0-9]/.test(password)) {
+        isValid = false;
+        errorElement.style.display = 'block';
+        errorElement.querySelector('span').textContent = 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt';
+      }
+      
+      // Nếu mật khẩu hợp lệ, tiếp tục gửi form
+      if (isValid) {
+        // Gửi dữ liệu thủ công qua fetch API
+        const formData = {
+          username: document.getElementById('username').value,
+          email: document.getElementById('email').value,
+          password: password,
+          name: document.getElementById('name').value
+        };
+        
+        fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.token) {
+            // Lưu token và chuyển hướng
+            localStorage.setItem('token', data.token);
+            window.location.href = '/';
+          } else {
+            // Hiển thị lỗi từ server
+            errorElement.style.display = 'block';
+            errorElement.querySelector('span').textContent = data.message || 'Có lỗi xảy ra khi đăng ký';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          errorElement.style.display = 'block';
+          errorElement.querySelector('span').textContent = 'Có lỗi xảy ra khi kết nối đến server';
+        });
+      }
+    });
+  </script>
 </body>
 </html>

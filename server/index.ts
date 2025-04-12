@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 // Tạo ứng dụng Express
 const app = express();
@@ -9,6 +10,7 @@ const app = express();
 // Middleware cơ bản
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(cors({
   origin: true, // Cho phép tất cả domain (trong production nên giới hạn)
   credentials: true // Cho phép gửi cookie/xác thực

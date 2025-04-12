@@ -20,6 +20,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: UpdateUser): Promise<User | null>;
   getAllUsers(): Promise<User[]>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Inquiry operations
   createInquiry(inquiry: InsertInquiry): Promise<Inquiry>;
@@ -58,6 +59,15 @@ export interface IStorage {
   
   getVoucherByCode(code: string): Promise<VoucherType | null>;
   markVoucherAsUsed(code: string): Promise<VoucherType | null>;
+
+  // Lưu đánh giá chat
+  saveChatRating(sessionId: string, rating: number, feedback: string, metadata?: any): Promise<void>;
+
+  // Lấy đánh giá của một phiên chat
+  getChatRating(sessionId: string): Promise<any>;
+
+  // Lấy tất cả đánh giá
+  getAllChatRatings(): Promise<any[]>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -139,6 +149,11 @@ export class PostgresStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     const result = await this._pool.query('SELECT * FROM users');
     return result.rows;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await this._pool.query('DELETE FROM users WHERE id = $1', [id]);
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Inquiry operations
@@ -444,6 +459,49 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error marking voucher as used:', error);
       return null;
+    }
+  }
+
+  // Lưu đánh giá chat
+  async saveChatRating(sessionId: string, rating: number, feedback: string, metadata?: any): Promise<void> {
+    try {
+      const metadataToSave = metadata || {};
+      const staffName = metadataToSave.staffName || '';
+      
+      await this.pool.query(
+        'INSERT INTO chat_ratings (session_id, rating, feedback, staff_name, metadata) VALUES ($1, $2, $3, $4, $5)',
+        [sessionId, rating, feedback, staffName, JSON.stringify(metadataToSave)]
+      );
+    } catch (error) {
+      console.error('Error saving chat rating:', error);
+      throw error;
+    }
+  }
+
+  // Lấy đánh giá của một phiên chat
+  async getChatRating(sessionId: string): Promise<any> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM chat_ratings WHERE session_id = $1',
+        [sessionId]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error getting chat rating:', error);
+      throw error;
+    }
+  }
+
+  // Lấy tất cả đánh giá
+  async getAllChatRatings(): Promise<any[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM chat_ratings ORDER BY created_at DESC'
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting all chat ratings:', error);
+      throw error;
     }
   }
 }

@@ -359,8 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteButtons.forEach(button => {
       button.addEventListener('click', function() {
         const userId = this.getAttribute('data-id');
-        // TODO: Implement user deletion if needed
-        alert('Chức năng xóa người dùng chưa được hỗ trợ');
+        if (confirm('Bạn có chắc chắn muốn xóa người dùng này không?')) {
+          deleteUser(userId);
+        }
       });
     });
   }
@@ -1527,4 +1528,70 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   });
+
+  // Hàm xóa người dùng
+  function deleteUser(userId) {
+    const token = localStorage.getItem('token');
+    
+    // Trước khi gọi API, đánh dấu hàng đang xóa bằng class "deleting"
+    const userRow = document.querySelector(`.delete-user-btn[data-id="${userId}"]`).closest('tr');
+    if (userRow) {
+      userRow.classList.add('deleting');
+      userRow.style.opacity = '0.5';
+    }
+    
+    fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(response => {
+      if (response.status === 204) {
+        // Xóa thành công - xóa hàng khỏi bảng ngay lập tức
+        if (userRow) {
+          userRow.remove();
+        }
+        
+        // Kiểm tra nếu không còn người dùng nào
+        const usersTable = document.getElementById('users-table');
+        if (usersTable.querySelectorAll('tr').length === 0) {
+          usersTable.innerHTML = '<tr><td colspan="6" class="no-data">Không có dữ liệu người dùng</td></tr>';
+        }
+        
+        showMessage('success', 'Đã xóa người dùng thành công!');
+      } else if (response.status === 403) {
+        // Khôi phục hàng nếu xóa thất bại
+        if (userRow) {
+          userRow.classList.remove('deleting');
+          userRow.style.opacity = '1';
+        }
+        showMessage('error', 'Không thể xóa tài khoản admin đang đăng nhập');
+      } else if (response.status === 404) {
+        // Xóa hàng khỏi giao diện vì người dùng không tồn tại
+        if (userRow) {
+          userRow.remove();
+        }
+        showMessage('error', 'Người dùng không tồn tại');
+      } else {
+        // Khôi phục hàng nếu xóa thất bại
+        if (userRow) {
+          userRow.classList.remove('deleting');
+          userRow.style.opacity = '1';
+        }
+        return response.json().then(data => {
+          throw new Error(data.message || 'Lỗi không xác định khi xóa người dùng');
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting user:', error);
+      // Khôi phục hàng nếu xóa thất bại
+      if (userRow) {
+        userRow.classList.remove('deleting');
+        userRow.style.opacity = '1';
+      }
+      showMessage('error', error.message || 'Lỗi khi xóa người dùng');
+    });
+  }
 });

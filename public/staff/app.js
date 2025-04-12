@@ -697,6 +697,67 @@ function initializeSocket() {
       }
     });
     
+    // Nhận danh sách tin nhắn gần đây khi tham gia phòng chat
+    socket.on('recent-messages', (messages) => {
+      console.log(`Nhận ${messages.length} tin nhắn gần đây:`);
+      
+      if (!currentSessionId) {
+        console.log('Không có phiên nào được chọn, bỏ qua tin nhắn');
+        return;
+      }
+      
+      // Xóa tin nhắn hiện tại để hiển thị lại từ đầu
+      const messagesContainer = document.getElementById('chat-messages');
+      if (messagesContainer) messagesContainer.innerHTML = '';
+      
+      // Xóa các ID tin nhắn đã lưu trước đó
+      receivedMessageIds.clear();
+      
+      // Hiển thị lại tất cả tin nhắn
+      messages.forEach(message => {
+        receivedMessageIds.add(message.id);
+        appendMessage(message);
+      });
+      
+      // Cuộn xuống tin nhắn mới nhất
+      scrollToBottom();
+    });
+    
+    // Nhận tin nhắn mới
+    socket.on('new-message', handleNewMessage);
+    
+    // Xử lý sự kiện phiên có cập nhật
+    socket.on('session-updated', (data) => {
+      console.log('Nhận thông báo phiên cập nhật:', data);
+      if (data.hasNewMessages) {
+        // Nếu đang xem phiên này thì tải lại tin nhắn
+        if (data.sessionId === currentSessionId) {
+          console.log(`Tải lại tin nhắn cho phiên hiện tại ${data.sessionId}`);
+          fetchSessionMessages(data.sessionId);
+        } else {
+          // Cập nhật trạng thái phiên trong danh sách
+          console.log(`Cập nhật danh sách phiên cho phiên ${data.sessionId}`);
+          updateSessionWithNewMessage(data.lastMessage || {
+            sessionId: data.sessionId,
+            content: 'Tin nhắn mới',
+            timestamp: new Date().toISOString()
+          });
+          
+          // Phát thông báo âm thanh để nhân viên biết có tin nhắn mới
+          playNotificationSound('message');
+        }
+      }
+    });
+    
+    // Theo dõi khi tham gia phòng chat thành công
+    socket.on('chat-joined', (data) => {
+      console.log(`Đã tham gia phòng chat ${data.sessionId}: ${data.success ? 'thành công' : 'thất bại'}`);
+      if (data.success && data.sessionId === currentSessionId) {
+        // Tải lại tin nhắn khi đã tham gia phòng thành công
+        fetchSessionMessages(data.sessionId);
+      }
+    });
+    
     // Xử lý sự kiện broadcast-support-request (thêm mới)
     socket.on('broadcast-support-request', (data) => {
       console.log('Received broadcast support request', data);
@@ -2090,21 +2151,36 @@ function quickResponseClickHandler(event) {
 
 // Tham gia vào phiên chat qua socket
 function joinChatSession(sessionId) {
-  if (socket) {
-    // Rời khỏi tất cả các phòng chat trước đó
-    if (socket.previousSessionId) {
-      socket.emit('leave-room', socket.previousSessionId);
-    }
-    
-    // Tham gia vào room với sessionId
-    socket.emit('join-room', sessionId);
-    socket.emit('join-chat', { sessionId: sessionId });
-    
-    // Lưu sessionId hiện tại để có thể rời phòng sau này
-    socket.previousSessionId = sessionId;
-
-    console.log(`Joined chat session: ${sessionId}`);
+  if (!socket || !sessionId) {
+    console.error('Không thể tham gia phiên: socket hoặc sessionId không hợp lệ');
+    return;
   }
+  
+  console.log(`Đang cố gắng tham gia phiên chat: ${sessionId}`);
+  
+  // Rời khỏi phòng chat trước đó nếu có
+  if (socket.previousSessionId) {
+    console.log(`Rời khỏi phòng chat cũ: ${socket.previousSessionId}`);
+    socket.emit('leave-room', socket.previousSessionId);
+  }
+  
+  // Tham gia vào phòng mới
+  console.log(`Tham gia vào phòng mới: ${sessionId}`);
+  socket.emit('join-room', sessionId);
+  
+  // Đăng ký tham gia chat
+  socket.emit('join-chat', { 
+    sessionId: sessionId,
+    staffId: currentUser ? currentUser.id : null 
+  });
+  
+  // Lưu session ID hiện tại
+  socket.previousSessionId = sessionId;
+  
+  // Debug - kiểm tra xem đã tham gia phòng chưa
+  setTimeout(() => {
+    socket.emit('check-room-membership', { room: sessionId });
+  }, 1000);
 }
 
 // Tải tin nhắn của phiên
@@ -2702,74 +2778,44 @@ function connectSocket() {
 
 // Xử lý tin nhắn mới
 function handleNewMessage(message) {
-  console.log('Nhận tin nhắn mới qua socket:', message);
-  
-  // Thông báo khi có tin nhắn mới từ khách hàng
-  if (message.sender === 'user') {
+  console.log('Tin nhắn mới nhận được:', message);
+
+  // Bỏ qua nếu tin nhắn này đã được xử lý
+  if (receivedMessageIds.has(message.id)) {
+    console.log(`Tin nhắn ID ${message.id} đã được xử lý, bỏ qua.`);
+    return;
+  }
+
+  // Đánh dấu tin nhắn này đã được xử lý
+  receivedMessageIds.add(message.id);
+
+  // Kiểm tra xem tin nhắn này thuộc phiên đang hiển thị không
+  if (message.sessionId === currentSessionId) {
+    console.log(`Hiển thị tin nhắn mới thuộc phiên hiện tại ${currentSessionId}`);
+    
+    // Hiển thị tin nhắn trong giao diện chat
+    appendMessage(message);
+    
+    // Cuộn xuống để hiển thị tin nhắn mới
+    scrollToBottom();
+    
+    // Đánh dấu phiên đã đọc
+    markSessionAsRead(message.sessionId);
+  } else {
+    // Cập nhật danh sách phiên để thông báo có tin nhắn mới
+    console.log(`Cập nhật danh sách phiên với tin nhắn mới cho phiên ${message.sessionId}`);
+    updateSessionWithNewMessage(message);
+    
     // Phát âm thanh thông báo
     playNotificationSound('message');
     
-    // Hiển thị thông báo desktop nếu không phải là phiên đang mở
-    if (message.sessionId !== currentSessionId) {
-      showDesktopNotification('Tin nhắn mới', 'Có tin nhắn mới từ khách hàng');
-    }
+    // Hiển thị thông báo desktop nếu được phép
+    showDesktopNotification('Tin nhắn mới', `Có tin nhắn mới từ phiên ${message.sessionId.substring(0, 8)}...`);
   }
-  
-  // Kiểm tra xem tin nhắn có thuộc phiên hiện tại và có ID hợp lệ không
-  if (!message || !message.id || !message.sessionId || message.sessionId !== currentSessionId) {
-    return;
-  }
-  
-  // 1. Kiểm tra xem tin nhắn này có phải là từ mình gửi đi không
-  const isSelfMessage = message.sender === 'staff';
-  
-  // 2. Tìm tin nhắn tạm thời tương ứng
-  const tempId = tempMessageMap.get(message.id);
-  if (tempId) {
-    console.log(`Đã tìm thấy tin nhắn tạm ${tempId} cho tin nhắn thật ${message.id}, chỉ cập nhật ID`);
-    // Cập nhật ID
-    const tempElement = document.querySelector(`.message-item[data-temp-ref="${message.id}"]`);
-    if (tempElement) {
-      tempElement.dataset.messageId = message.id;
-      delete tempElement.dataset.tempRef;
-      
-      // Đánh dấu tin nhắn đã được xử lý
-      receivedMessageIds.add(message.id);
-      
-      // Xóa khỏi map tạm thời
-      tempMessageMap.delete(message.id);
-      return;
-    }
-  }
-  
-  // 3. Kiểm tra xem tin nhắn đã hiển thị chưa
-  if (receivedMessageIds.has(message.id)) {
-    console.log(`Tin nhắn ${message.id} đã hiển thị trước đó, bỏ qua`);
-    return;
-  }
-  
-  // 4. Nếu là tin nhắn do mình gửi (staff) và không tìm thấy bản tạm, kiểm tra lần cuối
-  if (isSelfMessage) {
-    // Tìm tất cả tin nhắn của staff trong DOM để tránh trường hợp trùng lặp
-    const existingStaffMessages = document.querySelectorAll('.message.staff.message-item');
-    for (let msgElem of existingStaffMessages) {
-      // Kiểm tra nội dung và thời gian để tránh hiển thị trùng lặp
-      const contentElem = msgElem.querySelector('.content');
-      if (contentElem && contentElem.textContent === message.content) {
-        console.log(`Phát hiện tin nhắn staff trùng nội dung, bỏ qua: "${message.content}"`);
-        receivedMessageIds.add(message.id);
-        return;
-      }
-    }
-  }
-  
-  // 5. Nếu là tin nhắn mới thật sự, thêm vào màn hình
-  receivedMessageIds.add(message.id);
-  appendMessage(message);
-  scrollToBottom();
-  
-  // Cập nhật danh sách phiên với tin nhắn mới
-  updateSessionWithNewMessage(message);
+}
+
+// Cập nhật phiên với đánh giá
+function updateSessionWithRating(sessionId, rating) {
 }
 
 // Cập nhật phiên với đánh giá

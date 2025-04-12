@@ -94,7 +94,15 @@ export function initializeSocket(io: Server) {
         
         // Phát tín hiệu realtime về tin nhắn mới thông qua Socket.IO cho các nhân viên hỗ trợ
         if (staffSocketServer) {
+          // Gửi tin nhắn cho phòng có sessionId 
           staffSocketServer.to(data.sessionId).emit('new-message', userMessage);
+          
+          // Thêm broadcast cho support-staff để thông báo phiên có tin nhắn mới
+          staffSocketServer.to('support-staff').emit('session-updated', {
+            sessionId: data.sessionId,
+            hasNewMessages: true,
+            lastMessage: userMessage
+          });
         }
         
         // Nếu đã có nhân viên hỗ trợ, không gọi chatbot

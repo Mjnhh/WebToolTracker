@@ -154,14 +154,39 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
             console.error('Error fetching sessions for staff:', error);
           }
         }, 1000);
-      } else {
-        // Tham gia vào phiên hỗ trợ
-        socket.on('join-chat', (data) => {
-          if (data && data.sessionId) {
-            clientSessionId = data.sessionId;
-            console.log(`Client joined chat session: ${clientSessionId}`);
-          }
+      }
+    });
+    
+    // Tách sự kiện join-chat ra khỏi join-room để xử lý riêng
+    socket.on('join-chat', (data) => {
+      if (data && data.sessionId) {
+        clientSessionId = data.sessionId;
+        
+        // Thêm socket vào room sessionId
+        socket.join(data.sessionId);
+        console.log(`Client joined chat session: ${clientSessionId}, added to room ${data.sessionId}`);
+        
+        // Gửi xác nhận đã tham gia phòng
+        socket.emit('chat-joined', {
+          sessionId: data.sessionId,
+          success: true
         });
+        
+        // Nếu là staff, gửi lại tin nhắn gần đây
+        if (isStaff) {
+          setTimeout(async () => {
+            try {
+              // Lấy danh sách tin nhắn gần nhất và gửi lại cho staff
+              const messages = await storage.getChatMessages(data.sessionId);
+              if (messages && messages.length > 0) {
+                console.log(`Sending ${messages.length} recent messages for session ${data.sessionId} to staff`);
+                socket.emit('recent-messages', messages);
+              }
+            } catch (error) {
+              console.error('Error sending recent messages to staff:', error);
+            }
+          }, 500);
+        }
       }
     });
     
@@ -197,6 +222,13 @@ export function initializeSocketServer(httpServer: HTTPServer, storage: IStorage
         if (trackMessage(sessionId, savedMessage.id.toString())) {
           // Gửi lại tin nhắn cho tất cả mọi người trong phòng
           io.to(sessionId).emit('new-message', savedMessage);
+          
+          // Thêm broadcast cho support-staff để cập nhật phiên
+          io.to('support-staff').emit('session-updated', {
+            sessionId: sessionId,
+            hasNewMessages: true,
+            lastMessage: savedMessage
+          });
           
           // Kiểm tra trạng thái phiên và xử lý bot nếu cần
           handleBotResponse(sessionId, message);

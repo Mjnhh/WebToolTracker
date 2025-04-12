@@ -685,3 +685,13 @@ table tbody tr:hover {
 .btn-primary i, .btn-danger i {
   margin-right: 5px;
 }
+
+/* Thêm vào cuối file */
+tr.deleting {
+  transition: opacity 0.3s ease;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}

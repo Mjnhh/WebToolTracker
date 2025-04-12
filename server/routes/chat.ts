@@ -271,10 +271,12 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Phiên hỗ trợ không tồn tại" });
     }
 
-    // Parse metadata with better error handling
+    // Parse metadata với xử lý lỗi tốt hơn
     interface SessionMetadata {
       status?: string;
       completedBy?: string;
+      completedByName?: string;
+      staffName?: string;
       [key: string]: any;
     }
     
@@ -283,33 +285,32 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
       sessionMetadata = session.metadata ? JSON.parse(session.metadata) : {};
     } catch (e) {
       console.error('Error parsing session metadata:', e);
-      // Continue with empty metadata instead of returning error
       sessionMetadata = {};
     }
 
-    // Check if the session was completed - relaxing this requirement
-    // if (sessionMetadata.status !== 'completed') {
-    //   return res.status(400).json({ error: "Chỉ có thể đánh giá phiên hỗ trợ đã hoàn thành" });
-    // }
+    // Lưu đánh giá vào bảng chat_ratings
+    await storage.saveChatRating(
+      sessionId,
+      rating,
+      feedback || '',
+      {
+        staffId: sessionMetadata.completedBy,
+        staffName: sessionMetadata.staffName || '',
+        ratedAt: new Date().toISOString()
+      }
+    );
 
-    // Cập nhật metadata với đánh giá
+    // Cập nhật metadata của phiên chat
     const updatedMetadata: SessionMetadata = {
       ...sessionMetadata,
-      rating,
-      feedback: feedback || '',
-      ratedAt: new Date().toISOString(),
-      // Ensure status exists
       status: sessionMetadata.status || 'completed'
     };
 
-    console.log(`Updating session ${sessionId} with metadata:`, updatedMetadata);
-
-    // Lưu vào database
     await storage.updateChatSession(sessionId, {
       metadata: JSON.stringify(updatedMetadata)
     });
 
-    // Thông báo cho nhân viên về đánh giá mới (nếu cần)
+    // Thông báo cho nhân viên về đánh giá mới
     const socketServer = getSocketServer();
     if (sessionMetadata.completedBy && socketServer) {
       console.log(`Emitting new-rating event to support-staff for session ${sessionId}`);
@@ -319,8 +320,6 @@ router.post("/session/:sessionId/rate", async (req: Request, res: Response) => {
         feedback,
         staffId: sessionMetadata.completedBy
       });
-    } else {
-      console.log(`No socket server or completedBy not available: ${!!socketServer}, completedBy: ${sessionMetadata.completedBy}`);
     }
 
     // Ghi log

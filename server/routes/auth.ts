@@ -56,6 +56,13 @@ router.post('/login', async (req: Request, res: Response) => {
       name: user.name
     }, JWT_SECRET, { expiresIn: '7d' });
 
+    // Lưu token vào cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+    });
+
     res.json({ 
       token, 
       user: userWithoutPassword
@@ -152,17 +159,48 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
     }
 
+    // Kiểm tra mật khẩu mạnh
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 8 ký tự' });
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ message: 'Mật khẩu phải chứa ít nhất một chữ hoa' });
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ message: 'Mật khẩu phải chứa ít nhất một chữ thường' });
+    }
+    
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ message: 'Mật khẩu phải chứa ít nhất một chữ số' });
+    }
+    
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return res.status(400).json({ message: 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt' });
+    }
+
     // Kiểm tra username đã tồn tại chưa
     const existingUser = await storage.getUserByUsername(username);
     if (existingUser) {
       return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại' });
     }
 
+    // Kiểm tra email đã tồn tại chưa
+    const existingEmail = await storage.getUserByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({ message: 'Email đã được sử dụng' });
+    }
+
+    // Hash mật khẩu trước khi lưu vào database
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     // Tạo user mới với role là user
     const newUser = await storage.createUser({
       username,
       email,
-      password,
+      password: hashedPassword,
       name: name || username
     });
 
